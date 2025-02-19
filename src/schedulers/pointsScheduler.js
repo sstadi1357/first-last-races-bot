@@ -1,4 +1,5 @@
 // schedulers/pointsScheduler.js
+const { formatMessageHistory } = require('../services/formatHistoryToSheets');
 const cron = require('node-cron');
 const { cronSchedule } = require('../config/points');
 const { getLastMessages } = require('../utils/scoreCalculator');
@@ -99,6 +100,7 @@ function startScheduler(client) {
                 await updateAllUserRoles(guild, serverId, dateStr);
 
                 console.log(`\n✅ Completed processing for server ${serverId}`);
+                formatMessageHistory().catch(console.error);
             }
 
             console.log('\n=== Points Scheduler Completed! ===');
