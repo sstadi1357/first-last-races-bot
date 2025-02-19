@@ -1,0 +1,133 @@
+// services/roleService.js
+const db = require('../firebase');
+
+const ROLES = {
+    POINT_GOD: { points: 5000, id: '1336556598998601760', name: '5000 Point God' },
+    PURPLE: { points: 2000, id: '1336556534217441370', name: '2000 Points' },
+    BLUE: { points: 1000, id: '1336556482220785737', name: '1000 Points' },
+    DARK_GREEN: { points: 500, id: '1336556444954132480', name: '500 Points' },
+    GREEN: { points: 250, id: '1336556322165882893', name: '250 Points' },
+    YELLOW: { points: 100, id: '1336556271075332128', name: '100 Points' },
+    ORANGE: { points: 50, id: '1336555846888325130', name: '50 Points' },
+    FIRST_LAST: { id: '1336556008125763714', name: 'Got a First/Last' }
+};
+
+async function announceRole(guild, member, roleName, yesterdayDateStr) {
+    try {
+        const announcementsChannel = guild.channels.cache.find(channel => 
+            channel.name === 'flair-announcer' && channel.type === 5
+        );
+        
+        if (announcementsChannel) {
+            await announcementsChannel.send(
+                `<@${member.id}> got the "${roleName}" flair in the First/Last Races server! Congratulations! [achieved ${yesterdayDateStr}]`
+            );
+        }
+    } catch (error) {
+        console.error('Error sending role announcement:', error);
+    }
+}
+
+async function checkFirstOrLastYesterday(serverId, userId, yesterdayDateStr) {
+    try {
+        const dayDoc = await db.collection('servers')
+            .doc(serverId)
+            .collection('days')
+            .doc(yesterdayDateStr)
+            .get();
+
+        if (!dayDoc.exists) return false;
+
+        const dayData = dayDoc.data();
+        
+        if (dayData.lastMessages) {
+            if (dayData.lastMessages.last?.userId === userId) {
+                return true;
+            }
+        }
+
+        if (dayData.messages?.length > 0 && dayData.messages[0]?.userId === userId) {
+            return true;
+        }
+
+        return false;
+    } catch (error) {
+        console.error(`Error checking first/last status for user ${userId}:`, error);
+        return false;
+    }
+}
+
+async function updateUserRoles(guild, userId, score, yesterdayDateStr) {
+    try {
+        const member = await guild.members.fetch(userId);
+        if (!member) {
+            console.log(`❌ Could not find member ${userId} in guild`);
+            return;
+        }
+
+        // Check if they got first/last yesterday
+        const gotFirstOrLast = await checkFirstOrLastYesterday(guild.id, userId, yesterdayDateStr);
+
+        // Check First/Last role
+        if (gotFirstOrLast && !member.roles.cache.has(ROLES.FIRST_LAST.id)) {
+            try {
+                await member.roles.add(ROLES.FIRST_LAST.id);
+                console.log(`✅ Added First/Last role to ${member.user.username}`);
+                await announceRole(guild, member, ROLES.FIRST_LAST.name, yesterdayDateStr);
+            } catch (error) {
+                console.error(`❌ Error adding First/Last role: ${error.message}`);
+            }
+        }
+
+        // Only proceed with point-based roles if they have the First/Last role
+        if (!member.roles.cache.has(ROLES.FIRST_LAST.id)) {
+            console.log(`⚠️ ${member.user.username} doesn't have First/Last role - skipping point-based roles`);
+            return;
+        }
+
+        // Check all point-based roles in ascending order
+        const pointRoles = Object.entries(ROLES)
+            .filter(([key]) => key !== 'FIRST_LAST')
+            .sort((a, b) => a[1].points - b[1].points); // Sort by ascending points
+
+        for (const [roleName, roleData] of pointRoles) {
+            if (score >= roleData.points) {
+                if (!member.roles.cache.has(roleData.id)) {
+                    try {
+                        await member.roles.add(roleData.id);
+                        console.log(`✅ Added ${roleName} role to ${member.user.username}`);
+                        await announceRole(guild, member, roleData.name, yesterdayDateStr);
+                    } catch (error) {
+                        console.error(`❌ Error adding ${roleName} role: ${error.message}`);
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error(`❌ Error updating roles for user ${userId}:`, error);
+    }
+}
+
+async function updateAllUserRoles(guild, serverId, yesterdayDateStr) {
+    console.log('\n🎭 Starting role updates for all users...');
+    
+    try {
+        const usersSnapshot = await db.collection('servers').doc(serverId).collection('users').get();
+        
+        for (const userDoc of usersSnapshot.docs) {
+            const userData = userDoc.data();
+            const score = userData.score || 0;
+
+            await updateUserRoles(guild, userDoc.id, score, yesterdayDateStr);
+        }
+        
+        console.log('✅ Completed role updates for all users');
+    } catch (error) {
+        console.error('❌ Error updating roles:', error);
+    }
+}
+
+module.exports = {
+    updateAllUserRoles,
+    updateUserRoles
+};
