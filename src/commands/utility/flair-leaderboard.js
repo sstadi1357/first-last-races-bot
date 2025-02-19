@@ -10,7 +10,7 @@ const ROLE_TIERS = {
   DARK_GREEN: { points: 500, id: '1336556444954132480', name: '500 Points' },
   GREEN: { points: 250, id: '1336556322165882893', name: '250 Points' },
   YELLOW: { points: 100, id: '1336556271075332128', name: '100 Points' },
-  ORANGE: { points: 50, id: '1336556846888325130', name: '50 Points' },
+  ORANGE: { points: 50, id: '1336555846888325130', name: '50 Points' },
   FIRST_LAST: { points: 0, id: '1336556008125763714', name: 'Got a First/Last' },
   RACER: { points: 0, id: '1335822775901749299', name: 'Racer' }
 };
@@ -44,38 +44,38 @@ module.exports = {
         
         if (member) {
           // Find all roles the user has
-          const userRoles = new Set(member.roles.cache.map(role => role.id));
-          
-          // Find the highest tier role the user has
+          const userRoles = member.roles.cache;
           let highestTier = null;
           let highestPoints = -1;
-
-          // First check point-based roles
-          for (const [tier, tierData] of Object.entries(ROLE_TIERS)) {
-            if (userRoles.has(tierData.id) && tierData.points > 0) {
+          
+          // Check ALL roles the user has and find the highest point role
+          for (const [roleTier, tierData] of Object.entries(ROLE_TIERS)) {
+            if (userRoles.has(tierData.id)) {
+              // If this is a point role and has more points than current highest
               if (tierData.points > highestPoints) {
-                highestTier = tier;
+                highestTier = roleTier;
                 highestPoints = tierData.points;
               }
             }
           }
-
-          // If no point-based role found, check for First/Last role
-          if (!highestTier && userRoles.has(ROLE_TIERS.FIRST_LAST.id)) {
-            highestTier = 'FIRST_LAST';
+        
+          // If no point roles were found (highestPoints is still -1), check for First/Last and Racer
+          if (highestPoints === -1) {
+            if (userRoles.has(ROLE_TIERS.FIRST_LAST.id)) {
+              highestTier = 'FIRST_LAST';
+            } else if (userRoles.has(ROLE_TIERS.RACER.id)) {
+              highestTier = 'RACER';
+            }
           }
-          
-          // If no point-based role or First/Last role, check for Racer role
-          if (!highestTier && userRoles.has(ROLE_TIERS.RACER.id)) {
-            highestTier = 'RACER';
-          }
-
+        
           if (highestTier) {
             roleGroups[highestTier].push({
-              name: member.displayName, // Changed to use displayName instead of username
+              name: member.displayName,
               points: userData.score || 0
             });
-          } else if (userData.score > 0) {
+          }
+          // ...rest of the code remains the same...
+           else if (userData.score > 0) {
             // If user has points but no role, add them to the lowest point role they qualify for
             const qualifyingTier = Object.entries(ROLE_TIERS)
               .filter(([_, tierData]) => tierData.points > 0) // Filter out non-point roles
@@ -84,7 +84,7 @@ module.exports = {
 
             if (qualifyingTier) {
               roleGroups[qualifyingTier[0]].push({
-                name: member.displayName, // Changed to use displayName instead of username
+                name: member.displayName,
                 points: userData.score
               });
             }
@@ -109,9 +109,9 @@ module.exports = {
           const userList = users
             .map(user => `${user.name} (${user.points} pts)`)
             .join('\n');
-
+      
           embed.addFields({
-            name: `${tierData.name} (${users.length} users)`,
+            name: `${tierData.name} (${users.length} ${users.length === 1 ? 'user' : 'users'})`,
             value: userList || 'No users',
             inline: false
           });
