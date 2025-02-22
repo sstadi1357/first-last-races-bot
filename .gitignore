@@ -35,5 +35,3 @@ logs/
 src/config.json
 src/service.json
 
-# Ignore this file
-.gitignore
