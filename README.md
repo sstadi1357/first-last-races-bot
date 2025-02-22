@@ -6,4 +6,4 @@ How it works:
 2. The timestamps for all of the first messages are saved and arranged in order. At the end of the day, based on the order, the user gets points. If they get first place they get 20 points, 12 for second place, etc. It also checks the last message sent that day and the user who sent it and assigns them 20 extra points. It also assigns the second-last message's user 10 points.
 3. Then, it puts all the users in a leaderboard. It records the history in the database.
 
-Only for the First Last Races Server, it records the history in a google sheet using the Google Sheet API, which is right [here]([url](https://docs.google.com/spreadsheets/d/1CH85wIWmj0H6zgnjkNtHm_rYIlW_8AFM4z16G44W8ow/edit?gid=0#gid=0)).
+Only for the First Last Races Server, it records the history in a google sheet using the Google Sheet API, which is right here: https://docs.google.com/spreadsheets/d/1CH85wIWmj0H6zgnjkNtHm_rYIlW_8AFM4z16G44W8ow/edit?gid=0#gid=0.
