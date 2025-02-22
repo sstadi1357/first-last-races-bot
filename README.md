@@ -7,3 +7,4 @@ How it works:
 3. Then, it puts all the users in a leaderboard. It records the history in the database.
 
 Only for the First Last Races Server, it records the history in a google sheet using the Google Sheet API, which is right here: https://docs.google.com/spreadsheets/d/1CH85wIWmj0H6zgnjkNtHm_rYIlW_8AFM4z16G44W8ow/edit?gid=0#gid=0.
+Look at package.json to see all the packages that were used.
