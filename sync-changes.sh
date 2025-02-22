@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Navigate to the project directory (update this path to your project folder)
-cd Users/gopalakrishnatadiparthi/First_Last_Races
+cd /Users/gopalakrishnatadiparthi/First_Last_Races
 
 # Pull the latest changes from GitHub (replace "main" with "master" if needed)
 git pull origin main --allow-unrelated-histories
