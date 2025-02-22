@@ -2,7 +2,7 @@
 First Last Races bot that has all the functionality of First/Last Races. Most code is commented so you will understand. If you don't, ask AI to explain it to you.
 
 ## Installation
-- This bot is private and only works for the First Last Races Server.
+1. This bot is private and only works for the First Last Races Server, currently.
 2. Install the required dependencies:
     ```bash
     npm init -y
