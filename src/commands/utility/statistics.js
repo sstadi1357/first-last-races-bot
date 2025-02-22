@@ -8,13 +8,13 @@ module.exports = {
         .setDescription('View interesting server statistics'),
 
     async execute(interaction) {
-        await interaction.deferReply();
+        await interaction.deferReply(); // Defer the reply to give time for processing
 
         try {
-            const serverId = interaction.guildId;
-            const serverRef = db.collection('servers').doc(serverId);
-            const daysRef = serverRef.collection('days');
-            const daysSnapshot = await daysRef.get();
+            const serverId = interaction.guildId; // Get the server ID
+            const serverRef = db.collection('servers').doc(serverId); // Reference to the server document in Firestore
+            const daysRef = serverRef.collection('days'); // Reference to the days sub-collection
+            const daysSnapshot = await daysRef.get(); // Get all documents in the days collection
 
             // Initialize stats
             let totalDays = 0;
@@ -32,14 +32,14 @@ module.exports = {
 
             // Process each day's data
             for (const dayDoc of daysSnapshot.docs) {
-                const dayData = dayDoc.data();
-                const date = dayDoc.id;
-                totalDays++;
+                const dayData = dayDoc.data(); // Get the data of the day document
+                const date = dayDoc.id; // Get the date (document ID)
+                totalDays++; // Increment total days count
 
                 // Count messages and track unique participants
                 if (dayData.messages) {
-                    totalMessages += dayData.messages.length;
-                    dayData.messages.forEach(msg => uniqueParticipants.add(msg.userId));
+                    totalMessages += dayData.messages.length; // Add the number of messages to total messages
+                    dayData.messages.forEach(msg => uniqueParticipants.add(msg.userId)); // Add each user to the set of unique participants
 
                     // Track top 3 finishes
                     for (let i = 0; i < Math.min(3, dayData.messages.length); i++) {
@@ -51,7 +51,7 @@ module.exports = {
                                 displayName: member ? member.displayName : dayData.messages[i].username
                             };
                         }
-                        topThreeCount[userId].count++;
+                        topThreeCount[userId].count++; // Increment the count for top 3 finishes
                     }
                 }
 
@@ -62,7 +62,7 @@ module.exports = {
                     const displayName = member ? member.displayName : dayData.messages[0].username;
                     
                     firstPlaceCount[userId] = firstPlaceCount[userId] || { count: 0, displayName };
-                    firstPlaceCount[userId].count++;
+                    firstPlaceCount[userId].count++; // Increment the count for first places
 
                     // Track streaks
                     const dayDate = new Date(date);
@@ -93,7 +93,7 @@ module.exports = {
                     const member = await interaction.guild.members.fetch(userId).catch(() => null);
                     const displayName = member ? member.displayName : dayData.lastMessages.last.username;
                     lastMessageCount[userId] = lastMessageCount[userId] || { count: 0, displayName };
-                    lastMessageCount[userId].count++;
+                    lastMessageCount[userId].count++; // Increment the count for last messages
                 }
 
                 // Count second-last messages
@@ -102,7 +102,7 @@ module.exports = {
                     const member = await interaction.guild.members.fetch(userId).catch(() => null);
                     const displayName = member ? member.displayName : dayData.lastMessages.secondLast.username;
                     secondLastCount[userId] = secondLastCount[userId] || { count: 0, displayName };
-                    secondLastCount[userId].count++;
+                    secondLastCount[userId].count++; // Increment the count for second-last messages
                 }
 
                 // Track activity per day of week

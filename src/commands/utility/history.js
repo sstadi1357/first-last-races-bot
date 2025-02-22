@@ -1,6 +1,12 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const db = require('../../firebase');
+const { 
+    SlashCommandBuilder, 
+    EmbedBuilder,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle
+} = require('discord.js');const db = require('../../firebase');
 
+// This function returns a label for the position based on the index
 function getPositionLabel(index) {
     switch (index) {
         case 0: return "🥇 First";
@@ -8,43 +14,45 @@ function getPositionLabel(index) {
         case 2: return "🥉 Third";
         case 3: return "4th";
         case 4: return "5th";
-        default: return `${index + 1}th`;
+        default: return `${index + 1}th`; // 6th, 7th, 8th, etc.
     }
 }
 
 module.exports = {
-    cooldown: 5,
+    cooldown: 5, // Cooldown time for the command
     data: new SlashCommandBuilder()
-        .setName('history')
-        .setDescription('View message history for a specific day')
+        .setName('history') // Command name
+        .setDescription('View message history for a specific day') // Command description
         .addStringOption(option =>
-            option.setName('date')
-                .setDescription('Date in MM-DD-YYYY format')
-                .setRequired(true)
+            option.setName('date') // Option name
+                .setDescription('Date in MM-DD-YYYY format') // Option description
+                .setRequired(true) // Option is required
         ),
 
     async execute(interaction) {
-        await interaction.deferReply();
+        await interaction.deferReply(); // Defer the reply to allow time for processing
 
-        const dateStr = interaction.options.getString('date');
-        const dateRegex = /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])-(\d{4})$/;
+        const dateStr = interaction.options.getString('date'); // Get the date string from the command options
+        const dateRegex = /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])-(\d{4})$/; // Regex to validate the date format (MM-DD-YYYY)
 
+        // Validate the date format
         if (!dateRegex.test(dateStr)) {
-            return await interaction.editReply('Please provide a valid date in MM-DD-YYYY format (e.g., 01-20-2025).');
+            return await interaction.editReply('Please provide a valid date in MM-DD-YYYY format with zeroes (e.g., 01-20-2025).');
         }
 
         try {
-            const serverId = interaction.guildId;
-            const serverRef = db.collection('servers').doc(serverId);
-            const dayDoc = await serverRef.collection('days').doc(dateStr).get();
+            const serverId = interaction.guildId; // Get the server ID
+            const serverRef = db.collection('servers').doc(serverId); // Reference to the server document in Firebase
+            const dayDoc = await serverRef.collection('days').doc(dateStr).get(); // Get the document for the specified date
 
+            // Check if the document exists
             if (!dayDoc.exists) {
                 return await interaction.editReply(`No messages recorded for ${dateStr}.`);
             }
 
-            const data = dayDoc.data();
-            const messages = data.messages || [];
-            const lastMessages = data.lastMessages || {};
+            const data = dayDoc.data(); // Get the data from the document
+            const messages = data.messages || []; // Get the messages array or an empty array if it doesn't exist
+            const lastMessages = data.lastMessages || {}; // Get the last messages object or an empty object if it doesn't exist
 
             // Get all guild members
             const guild = interaction.guild;
@@ -53,45 +61,128 @@ module.exports = {
             // Process regular messages (first messages of the day)
             let description = '';
             messages.forEach((msg, index) => {
-                const member = members.find(m => m.user.username === msg.username);
-                const displayName = member ? member.displayName : msg.username;
-                description += `${getPositionLabel(index)}: ${displayName}\n`;
+                const member = members.find(m => m.user.username === msg.username); // Find the member by username
+                const displayName = member ? member.displayName : msg.username; // Use the display name if the member is found, otherwise use the username
+                description += `${getPositionLabel(index)}: ${displayName}\n`; // Add the message to the description
             });
 
-            // Add last/second-last messages if they exist
+            // Add last/second-last messages
             if (lastMessages.last) {
-                const lastMember = members.find(m => m.user.username === lastMessages.last.username);
-                const lastDisplayName = lastMember ? lastMember.displayName : lastMessages.last.username;
-                description += `\n🌙 **Last message**: ${lastDisplayName}`;
+                const lastMember = members.find(m => m.user.username === lastMessages.last.username); // Find the member by username
+                const lastDisplayName = lastMember ? lastMember.displayName : lastMessages.last.username; // Use the display name if the member is found, otherwise use the username
+                description += `\n Last message: ${lastDisplayName}`;
                 
                 if (lastMessages.secondLast) {
-                    const secondLastMember = members.find(m => m.user.username === lastMessages.secondLast.username);
-                    const secondLastDisplayName = secondLastMember ? secondLastMember.displayName : lastMessages.secondLast.username;
-                    description += `\n🌑 **Second-last message**: ${secondLastDisplayName}`;
+                    const secondLastMember = members.find(m => m.user.username === lastMessages.secondLast.username); // Find the member by username
+                    const secondLastDisplayName = secondLastMember ? secondLastMember.displayName : lastMessages.secondLast.username; // Use the display name if the member is found, otherwise use the username
+                    description += `\n Second-last message: ${secondLastDisplayName}`;
                 }
             }
 
-            // Validate and truncate description
+            // Check if the description is empty or not a string
             if (!description || typeof description !== 'string' || description.trim().length === 0) {
                 description = 'No messages to display for this date.';
-            } else if (description.length > 4096) {
-                description = description.slice(0, 4093) + '...';
+            } else {
+                const maxDescriptionLength = 4096; // Maximum length for the description
+                const pages = []; // Array to hold the pages of the description
+                while (description.length > maxDescriptionLength) {
+                    let splitIndex = description.lastIndexOf('\n', maxDescriptionLength); // Find the last newline character within the maximum length
+                    if (splitIndex === -1) splitIndex = maxDescriptionLength; // If no newline character is found, split at the maximum length
+                    pages.push(description.slice(0, splitIndex)); // Add the page to the array
+                    description = description.slice(splitIndex).trim(); // Remove the page from the description
+                }
+                pages.push(description); // Add the remaining description as the last page
+            
+                let currentPageIndex = 0; // Index of the current page
+            
+                // Function to generate an embed for a specific page
+                const generateEmbed = (pageIndex) => {
+                    return new EmbedBuilder()
+                        .setColor('#0099FF')
+                        .setTitle(`📅 Message History for ${dateStr} (Page ${pageIndex + 1}/${pages.length})`)
+                        .setDescription(pages[pageIndex])
+                        .setTimestamp();
+                };
+            
+                // Function to generate buttons for pagination
+                const generateButtons = (pageIndex) => {
+                    return new ActionRowBuilder()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId('first')
+                                .setLabel('⏪ First')
+                                .setStyle(ButtonStyle.Primary)
+                                .setDisabled(pageIndex === 0), // Disable the button if on the first page
+                            new ButtonBuilder()
+                                .setCustomId('previous')
+                                .setLabel('◀️ Previous')
+                                .setStyle(ButtonStyle.Primary)
+                                .setDisabled(pageIndex === 0), // Disable the button if on the first page
+                            new ButtonBuilder()
+                                .setCustomId('next')
+                                .setLabel('Next ▶️')
+                                .setStyle(ButtonStyle.Primary)
+                                .setDisabled(pageIndex === pages.length - 1), // Disable the button if on the last page
+                            new ButtonBuilder()
+                                .setCustomId('last')
+                                .setLabel('Last ⏩')
+                                .setStyle(ButtonStyle.Primary)
+                                .setDisabled(pageIndex === pages.length - 1) // Disable the button if on the last page
+                        );
+                };
+            
+                // If there are multiple pages, set up pagination
+                if (pages.length > 1) {
+                    const response = await interaction.editReply({
+                        embeds: [generateEmbed(currentPageIndex)], // Send the first page
+                        components: [generateButtons(currentPageIndex)] // Send the buttons
+                    });
+            
+                    const collector = response.createMessageComponentCollector({ time: 300000 }); // Collector to handle button interactions (5 minutes)
+            
+                    collector.on('collect', async (i) => {
+                        if (i.user.id !== interaction.user.id) {
+                            await i.reply({ content: 'You cannot use these buttons.', ephemeral: true });
+                            return;
+                        }
+            
+                        // Update the current page index based on the button clicked
+                        switch (i.customId) {
+                            case 'first': currentPageIndex = 0; break;
+                            case 'previous': currentPageIndex = Math.max(0, currentPageIndex - 1); break;
+                            case 'next': currentPageIndex = Math.min(pages.length - 1, currentPageIndex + 1); break;
+                            case 'last': currentPageIndex = pages.length - 1; break;
+                        }
+            
+                        // Update the embed and buttons
+                        await i.update({
+                            embeds: [generateEmbed(currentPageIndex)],
+                            components: [generateButtons(currentPageIndex)]
+                        });
+                    });
+            
+                    collector.on('end', async () => {
+                        await response.edit({ components: [] }).catch(() => {}); // Remove the buttons when the collector ends
+                    });
+                    return;
+                }
             }
-
-            // Create embed with finalized description
+            
+            // For a single page, create and send the embed
             const embed = new EmbedBuilder()
                 .setColor('#0099FF')
                 .setTitle(`📅 Message History for ${dateStr}`)
                 .setDescription(description)
                 .setTimestamp();
-
+            
             await interaction.editReply({ embeds: [embed] });
+
         } catch (error) {
-            console.error('Error fetching history:', error);
+            console.error('Error fetching history:', error); // Log the error
             await interaction.editReply({
                 content: 'An error occurred while retrieving message history. Please try again later.',
-                ephemeral: true
+                ephemeral: true // Send the error message as ephemeral
             });
         }
-    },
+    }
 };

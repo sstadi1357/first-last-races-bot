@@ -1,4 +1,10 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { 
+    SlashCommandBuilder, 
+    EmbedBuilder,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle
+} = require('discord.js');
 const db = require('../../firebase');
 
 module.exports = {
@@ -85,39 +91,110 @@ module.exports = {
             const bestDay = avgDayParticipation.sort((a, b) => b.avg - a.avg)[0];
 
             // Create embed
-            const embed = new EmbedBuilder()
+            const pages = [];
+            
+            // Page 1: Most Active Users
+            pages.push(new EmbedBuilder()
                 .setColor('#0099FF')
-                .setTitle('📊 Participation Statistics')
-                .addFields(
-                    {
-                        name: '🏆 Most Active Users',
-                        value: sortedUsers.map(([userId, stats], index) => 
-                            `${index + 1}. ${userDisplayNames.get(userId)} - ${stats.count} participations ` +
-                            `(${stats.firstPlaces} firsts)`
-                        ).join('\n') || 'No data',
-                        inline: false
-                    },
-                    {
-                        name: '📅 Most Active Days',
-                        value: sortedDays.map(([date, count], index) => 
-                            `${index + 1}. ${date} - ${count} participants`
-                        ).join('\n') || 'No data',
-                        inline: false
-                    },
-                    {
-                        name: '📈 Average Participation',
-                        value: [
-                            `Most Active Day: ${bestDay.day} (avg. ${bestDay.avg.toFixed(1)} participants)`,
-                            `Total Days Tracked: ${totalDays}`,
-                            `Total Unique Participants: ${userParticipation.size}`
-                        ].join('\n'),
-                        inline: false
-                    }
-                )
+                .setTitle('📊 Participation Statistics - Most Active Users')
+                .addFields({
+                    name: '🏆 Most Active Users',
+                    value: sortedUsers.map(([userId, stats], index) => 
+                        `${index + 1}. ${userDisplayNames.get(userId)} - ${stats.count} participations ` +
+                        `(${stats.firstPlaces} firsts)`
+                    ).join('\n') || 'No data',
+                    inline: false
+                })
                 .setTimestamp()
-                .setFooter({ text: 'Statistics are updated daily' });
+                .setFooter({ text: 'Page 1/3 • Statistics are updated daily' }));
 
-            await interaction.editReply({ embeds: [embed] });
+            // Page 2: Most Active Days
+            pages.push(new EmbedBuilder()
+                .setColor('#0099FF')
+                .setTitle('📊 Participation Statistics - Most Active Days')
+                .addFields({
+                    name: '📅 Most Active Days',
+                    value: sortedDays.map(([date, count], index) => 
+                        `${index + 1}. ${date} - ${count} participants`
+                    ).join('\n') || 'No data',
+                    inline: false
+                })
+                .setTimestamp()
+                .setFooter({ text: 'Page 2/3 • Statistics are updated daily' }));
+
+            // Page 3: Average Participation
+            pages.push(new EmbedBuilder()
+                .setColor('#0099FF')
+                .setTitle('📊 Participation Statistics - Average Participation')
+                .addFields({
+                    name: '📈 Average Participation',
+                    value: [
+                        `Most Active Day: ${bestDay.day} (avg. ${bestDay.avg.toFixed(1)} participants)`,
+                        `Total Days Tracked: ${totalDays}`,
+                        `Total Unique Participants: ${userParticipation.size}`
+                    ].join('\n'),
+                    inline: false
+                })
+                .setTimestamp()
+                .setFooter({ text: 'Page 3/3 • Statistics are updated daily' }));
+
+            let currentPageIndex = 0;
+
+            const generateButtons = (pageIndex) => {
+                return new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('first')
+                            .setLabel('⏪ First')
+                            .setStyle(ButtonStyle.Primary)
+                            .setDisabled(pageIndex === 0),
+                        new ButtonBuilder()
+                            .setCustomId('previous')
+                            .setLabel('◀️ Previous')
+                            .setStyle(ButtonStyle.Primary)
+                            .setDisabled(pageIndex === 0),
+                        new ButtonBuilder()
+                            .setCustomId('next')
+                            .setLabel('Next ▶️')
+                            .setStyle(ButtonStyle.Primary)
+                            .setDisabled(pageIndex === pages.length - 1),
+                        new ButtonBuilder()
+                            .setCustomId('last')
+                            .setLabel('Last ⏩')
+                            .setStyle(ButtonStyle.Primary)
+                            .setDisabled(pageIndex === pages.length - 1)
+                    );
+            };
+
+            const response = await interaction.editReply({
+                embeds: [pages[currentPageIndex]],
+                components: [generateButtons(currentPageIndex)]
+            });
+
+            const collector = response.createMessageComponentCollector({ time: 300000 }); // 5 minutes
+
+            collector.on('collect', async (i) => {
+                if (i.user.id !== interaction.user.id) {
+                    await i.reply({ content: 'You cannot use these buttons.', ephemeral: true });
+                    return;
+                }
+
+                switch (i.customId) {
+                    case 'first': currentPageIndex = 0; break;
+                    case 'previous': currentPageIndex = Math.max(0, currentPageIndex - 1); break;
+                    case 'next': currentPageIndex = Math.min(pages.length - 1, currentPageIndex + 1); break;
+                    case 'last': currentPageIndex = pages.length - 1; break;
+                }
+
+                await i.update({
+                    embeds: [pages[currentPageIndex]],
+                    components: [generateButtons(currentPageIndex)]
+                });
+            });
+
+            collector.on('end', async () => {
+                await response.edit({ components: [] }).catch(() => {});
+            });
 
         } catch (error) {
             console.error('Error creating participation stats:', error);
