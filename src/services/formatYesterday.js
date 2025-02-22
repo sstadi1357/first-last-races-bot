@@ -4,7 +4,7 @@ const sheets = require('../sheets');
 const { format, parse, parseISO, isValid } = require('date-fns');
 const { shouldBeGray } = require('../config/greyDates');
 
-// Configure the spreadsheet details
+// Spreadsheet and server configuration
 const SPREADSHEET_ID = '1CH85wIWmj0H6zgnjkNtHm_rYIlW_8AFM4z16G44W8ow';
 const SERVER_ID = '1300198974988357732';
 
@@ -58,6 +58,7 @@ function parseTimestamp(timestamp) {
     }
 }
 
+// Function to get month name from month number
 function getMonthName(month) {
     const months = [
         'January', 'February', 'March', 'April', 'May', 'June',
@@ -66,11 +67,13 @@ function getMonthName(month) {
     return months[month - 1];
 }
 
+// Function to get sheet name from date string
 function getSheetName(dateStr) {
     const [month, day, year] = dateStr.split('-');
     return `${getMonthName(parseInt(month))} ${year}`;
 }
 
+// Function to get or create a sheet
 async function getOrCreateSheet(sheetName) {
     try {
         const spreadsheet = await sheets.spreadsheets.get({
@@ -116,6 +119,7 @@ async function getOrCreateSheet(sheetName) {
     }
 }
 
+// Function to get maximum positions and create headers
 async function getMaxPositionsAndCreateHeaders() {
     console.log('Analyzing historical data to determine maximum positions...');
     
@@ -145,6 +149,7 @@ async function getMaxPositionsAndCreateHeaders() {
     return { headers, maxPositions };
 }
 
+// Function to apply header formatting
 async function applyHeaderFormatting(sheetId) {
   try {
       const request = {
@@ -265,6 +270,7 @@ async function processDay(dayDoc, maxPositions) {
   };
 }
 
+// Main function to format message history
 async function formatMessageHistory() {
   try {
       // First check if we need to update headers
@@ -427,7 +433,7 @@ async function formatMessageHistory() {
                   }
               }]
           }
-      });yes
+      });
 
       console.log('Sheet update completed successfully');
   } catch (error) {
@@ -435,6 +441,8 @@ async function formatMessageHistory() {
       throw error;
   }
 }
+
+// Function to check if two arrays are equal
 function arraysEqual(a, b) {
     if (!a || !b || a.length !== b.length) return false;
     return a.every((val, index) => val === b[index]);
