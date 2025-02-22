@@ -1,0 +1,36 @@
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore node modules (if using Node.js)
+node_modules/
+npm-debug.log
+yarn.lock
+
+# Ignore Python virtual environments
+venv/
+__pycache__/
+
+# Ignore compiled files
+*.class
+*.o
+*.so
+*.dll
+*.exe
+*.out
+
+# Ignore logs and temporary files
+logs/
+*.log
+*.tmp
+*.swp
+
+# Ignore IDE and editor-specific files
+.vscode/
+.idea/
+*.iml
+
+# Ignore environment and config files
+.env
+src/config.json
+src/service.json
