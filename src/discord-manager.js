@@ -6,6 +6,7 @@ const token = process.env.DISCORD_TOKEN;
 const clientId = process.env.DISCORD_CLIENT_ID;
 const path = require('node:path');
 const fs = require('node:fs');
+console.log(token)
 
 class DiscordBotManager {
     constructor() {

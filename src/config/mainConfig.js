@@ -13,7 +13,7 @@ const flairAnnouncementChannelId = '1336557845558333470';
 //You can keep the rest of these as is, or you can change them to customize it.
 
 //Announcement to send when someone gets a flair
-const flairAnnouncement = `<@${member.id}> got the "${roleName}" flair in the First/Last Races server! Congratulations! [achieved ${yesterdayDateStr}]`
+const flairAnnouncement = '<@${member.id}> got the "${roleName}" flair in the First/Last Races server! Congratulations! [achieved ${yesterdayDateStr}]'
 
 // Role (flair) tiers and their corresponding points
 const ROLES = {
