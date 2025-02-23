@@ -1,7 +1,7 @@
 // schedulers/pointsScheduler.js
 const { formatMessageHistory } = require('../services/formatHistoryToSheets');
 const cron = require('node-cron');
-const { cronSchedule } = require('../config/points');
+const { cronSchedule } = require('../config/mainConfig.js');
 const { getLastMessages } = require('../utils/lastMessages');
 const { updateScoresAndLeaderboard, storeLastMessages } = require('../services/firestoreService');
 const { updateAllUserRoles } = require('../services/roleService');

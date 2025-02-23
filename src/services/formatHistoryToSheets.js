@@ -1,8 +1,8 @@
 // formatHistoryToSheets.js
 const db = require('../firebase');
 const sheets = require('../sheets');
-const { format, parse, parseISO, isValid } = require('date-fns');
-const { shouldBeGray } = require('../config/greyDates');
+const { format, parseISO, isValid } = require('date-fns');
+const { shouldBeGray } = require('../config/holidayDates');
 const { serverId, spreadsheetId} = require('../config/mainConfig');   
 // Configure the spreadsheet details
 const SPREADSHEET_ID = spreadsheetId;
@@ -51,7 +51,7 @@ function getMonthName(month) {
 }
 
 function getSheetName(dateStr) {
-    const [month, day, year] = dateStr.split('-');
+    const [month,, year] = dateStr.split('-');
     return `${getMonthName(parseInt(month))} ${year}`;
 }
 

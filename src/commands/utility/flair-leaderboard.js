@@ -1,7 +1,7 @@
 const {SlashCommandBuilder,ActionRowBuilder,ButtonBuilder,ButtonStyle,} = require("discord.js");
 const { EmbedBuilder } = require("discord.js");
 const db = require("../../firebase");
-const { ROLES } = require("../../config/flairs.js"); // Import the role tiers from the config file
+const { ROLES } = require("../../config/mainConfig.js"); // Import the role tiers from the config file
 
 module.exports = {
   data: new SlashCommandBuilder()
