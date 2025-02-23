@@ -1,21 +1,11 @@
 // services/roleService.js
 const db = require('../firebase');
-
-const ROLES = {
-    POINT_GOD: { points: 5000, id: '1336556598998601760', name: '5000 Point God' },
-    PURPLE: { points: 2000, id: '1336556534217441370', name: '2000 Points' },
-    BLUE: { points: 1000, id: '1336556482220785737', name: '1000 Points' },
-    DARK_GREEN: { points: 500, id: '1336556444954132480', name: '500 Points' },
-    GREEN: { points: 250, id: '1336556322165882893', name: '250 Points' },
-    YELLOW: { points: 100, id: '1336556271075332128', name: '100 Points' },
-    ORANGE: { points: 50, id: '1336555846888325130', name: '50 Points' },
-    FIRST_LAST: { id: '1336556008125763714', name: 'Got a First/Last' }
-};
+const {ROLES} = require('../config/flairs');
 
 async function announceRole(guild, member, roleName, yesterdayDateStr) {
     try {
         const announcementsChannel = guild.channels.cache.find(channel => 
-            channel.name === 'flair-announcer' && channel.type === 5
+            channel.name === 'flair-announcer' 
         );
         
         if (announcementsChannel) {

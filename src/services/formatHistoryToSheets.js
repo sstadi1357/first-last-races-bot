@@ -3,10 +3,10 @@ const db = require('../firebase');
 const sheets = require('../sheets');
 const { format, parse, parseISO, isValid } = require('date-fns');
 const { shouldBeGray } = require('../config/greyDates');
-
+const { serverId, spreadsheetId} = require('../config/mainConfig');   
 // Configure the spreadsheet details
-const SPREADSHEET_ID = '1CH85wIWmj0H6zgnjkNtHm_rYIlW_8AFM4z16G44W8ow';
-const SERVER_ID = '1300198974988357732';
+const SPREADSHEET_ID = spreadsheetId;
+const SERVER_ID = serverId;
 
 // Cell formatting constants
 const GRAY_BACKGROUND = {
@@ -17,22 +17,6 @@ const GRAY_BACKGROUND = {
     }
 };
 
-// Header format with exact black background
-const HEADER_FORMAT = {
-  backgroundColor: {
-      red: 1,
-      green: 1,
-      blue: 1
-  },
-  textFormat: {
-      foregroundColor: {
-          red: 0,
-          green: 0,
-          blue: 0
-      },
-      bold: true
-  }
-};
 
 // Function to safely parse timestamp
 function parseTimestamp(timestamp) {

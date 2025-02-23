@@ -2,7 +2,7 @@
 const { formatMessageHistory } = require('../services/formatHistoryToSheets');
 const cron = require('node-cron');
 const { cronSchedule } = require('../config/points');
-const { getLastMessages } = require('../utils/scoreCalculator');
+const { getLastMessages } = require('../utils/lastMessages');
 const { updateScoresAndLeaderboard, storeLastMessages } = require('../services/firestoreService');
 const { updateAllUserRoles } = require('../services/roleService');
 const db = require('../firebase');

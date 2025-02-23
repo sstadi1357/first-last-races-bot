@@ -8,7 +8,8 @@ const ROLES = {
     GREEN: { points: 250, id: '1336556322165882893', name: '250 Points', color: 'green' },
     YELLOW: { points: 100, id: '1336556271075332128', name: '100 Points', color: 'yellow' },
     ORANGE: { points: 50, id: '1336555846888325130', name: '50 Points', color: 'orange' },
-    FIRST_LAST: { id: '1336556008125763714', name: 'Got a First/Last', color: 'red' }
+    FIRST_LAST: { points: 0, id: '1336556008125763714', name: 'Got a First/Last', color: 'red' },
+    RACER: { points: 0, id: "1335822775901749299", name: "Racer", color: 'gray' }
 };
 
 // Hierarchy from lowest to highest

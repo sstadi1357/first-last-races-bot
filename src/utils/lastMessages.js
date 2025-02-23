@@ -1,5 +1,4 @@
 // utils/scoreCalculator.js
-const { scoring } = require('../config/points');
 
 function formatTimestamp(timestamp) {
   return new Date(timestamp).toLocaleString('en-US', {
