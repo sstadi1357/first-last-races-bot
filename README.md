@@ -146,5 +146,4 @@ Ensure you have the following:
    ```
 
 ---
->>>>>>> 720a7ae1565702264fa49d0922a1a1b3e087aeae
 
