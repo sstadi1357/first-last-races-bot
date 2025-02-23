@@ -1,6 +1,5 @@
 # First Last Races Bot
 
-<<<<<<< HEAD
 The **First Last Races Bot** is designed to track and rank the first and last messages sent by users in a Discord server each day. The bot records timestamps, assigns points, maintains leaderboards, and integrates with Firebase and Google Sheets for data storage. Most of the code is commented for clarity.
 =======
 The **First Last Races Bot** is based on the game First Last Races. If you do not know how to play the game, look at the rules [here](https://docs.google.com/document/d/1hvLfb2FHRatZ4jjcHOTxkN4P5Ten2Qv7lt4jRBHvk2Q/edit?tab=t.0). The **First Last Races Bot** is designed to track and rank the first and last messages sent by users in a Discord server each day. The bot records timestamps, assigns points, maintains leaderboards, and integrates with Firebase and Google Sheets for data storage. Most of the code is commented for clarity.
