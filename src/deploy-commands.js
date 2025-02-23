@@ -2,7 +2,6 @@
 require('dotenv').config(); // Load environment variables from a .env file
 // Import modules
 const { REST, Routes } = require('discord.js');
-const token = process.env.DISCORD_TOKEN;
 const clientId = process.env.DISCORD_CLIENT_ID;
 const fs = require('fs');
 const path = require('path');
