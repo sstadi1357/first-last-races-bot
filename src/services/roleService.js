@@ -1,16 +1,17 @@
 // services/roleService.js
 const db = require('../firebase');
-const {ROLES} = require('../config/flairs');
-
+const {flairAnnouncement, flairAnnouncementChannelId, ROLES} = require('../config/mainConfig');
 async function announceRole(guild, member, roleName, yesterdayDateStr) {
     try {
         const announcementsChannel = guild.channels.cache.find(channel => 
-            channel.name === 'flair-announcer' 
+            channel.id === flairAnnouncementChannelId 
         );
         
         if (announcementsChannel) {
             await announcementsChannel.send(
-                `<@${member.id}> got the "${roleName}" flair in the First/Last Races server! Congratulations! [achieved ${yesterdayDateStr}]`
+                flairAnnouncement.replace('${roleName}', roleName)
+                    .replace('<@${member.id}>', `<@${member.id}>`)
+                    .replace('${yesterdayDateStr}', yesterdayDateStr)
             );
         }
     } catch (error) {

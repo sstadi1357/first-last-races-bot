@@ -1,5 +1,5 @@
-// utils/scoreCalculator.js
-
+// Description: Utility functions for fetching the last messages  
+const { mainChannelId } = require('../config/mainConfig');
 function formatTimestamp(timestamp) {
   return new Date(timestamp).toLocaleString('en-US', {
     month: 'numeric',
@@ -17,7 +17,7 @@ async function getLastMessages(guild, startOfDay, endOfDay) {
   
   // Find the races channel
   const racesChannel = guild.channels.cache.find(channel => 
-    channel.type === 0 && channel.viewable && channel.name === 'general-races'
+    channel.type === 0 && channel.viewable && channel.id === mainChannelId
   );
 
   if (!racesChannel) {

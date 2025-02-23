@@ -1,8 +1,9 @@
 // services/firestoreService.js
 const { FieldValue } = require('firebase-admin/firestore');
 const db = require('../firebase');
-const { scoring } = require('../config/points');
+const { scoring } = require('../config/mainConfig');
 
+// Calculate score based on message position
 function calculateScore(messages, index) {
   const position = index + 1;
   return scoring.positions[position] || scoring.positions.default;
@@ -14,7 +15,6 @@ async function updateScoresAndLeaderboard(serverId, messages, lastMessageInfo, s
   
   try {
     await db.runTransaction(async (transaction) => {
-      // Initialize user scores map
       const userScoresMap = new Map();
       
       // Get current user scores if they exist
@@ -29,7 +29,6 @@ async function updateScoresAndLeaderboard(serverId, messages, lastMessageInfo, s
 
       // Process each message and calculate scores
       messages.forEach((message, index) => {
-        // Initialize user data if not exists
         const userData = userScoresMap.get(message.userId) || {
           userId: message.userId,
           score: 0,
@@ -55,8 +54,7 @@ async function updateScoresAndLeaderboard(serverId, messages, lastMessageInfo, s
       });
 
       // Convert map to sorted array
-      const sortedUsers = Array.from(userScoresMap.values())
-        .sort((a, b) => b.score - a.score);
+      const sortedUsers = Array.from(userScoresMap.values()).sort((a, b) => b.score - a.score);
 
       console.log('\nUpdating user scores and ranks...');
       

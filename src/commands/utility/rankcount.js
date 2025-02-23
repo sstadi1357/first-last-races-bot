@@ -18,8 +18,8 @@ const positions = Array.from({ length: 20 }, (_, i) => {
 // Add special positions
 const rankChoices = [
     ...positions,
-    { name: '🌙 Last Message', value: 'last' },
-    { name: '🌑 Second Last Message', value: 'secondlast' }
+    { name: 'Last Message', value: 'last' },
+    { name: 'Second Last Message', value: 'secondlast' }
 ];
 
 module.exports = {

@@ -1,6 +1,6 @@
 // grayDates.js
 const { isWeekend, parseISO } = require('date-fns');
-
+// Holiday dates are grayed out in the sheet.
 // List of specific dates that should be grayed out (format: YYYY-MM-DD)
 const GRAY_DATES = [
 
