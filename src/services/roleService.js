@@ -11,7 +11,7 @@ async function announceRole(guild, member, roleName, yesterdayDateStr) {
             await announcementsChannel.send(
                 flairAnnouncement.replace('<roleName>', roleName)
                     .replace('<member>', `<@${member.id}>`)
-                    .replace('<yesterdayDateStr>', yesterdayDateStr)
+                    .replace('<date>', yesterdayDateStr)
             );
         }
     } catch (error) {
