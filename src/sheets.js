@@ -1,6 +1,6 @@
 // sheets.js - Google Sheets API configuration
 const { google } = require("googleapis");
-const serviceAccount = require("./service.json"); // Using the same service account key
+const serviceAccount = require("../service.json"); // Using the same service account key
 
 // Authenticate with the service account
 const auth = new google.auth.GoogleAuth({

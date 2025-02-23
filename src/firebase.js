@@ -1,5 +1,5 @@
 const admin = require("firebase-admin");
-const serviceAccount = require("./service.json");
+const serviceAccount = require("../service.json");
 const firebaseId = require("./config/mainConfig.js");
 
 // Initialize Firebase with databaseURL

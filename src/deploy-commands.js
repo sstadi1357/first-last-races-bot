@@ -1,8 +1,9 @@
 //RUN THIS CODE EVERY TIME NEW COMMANDS ARE CREATED
-
+require('dotenv').config(); // Load environment variables from a .env file
 // Import modules
 const { REST, Routes } = require('discord.js');
-const { clientId, token } = require('./config.json');
+const token = process.env.DISCORD_TOKEN;
+const clientId = process.env.DISCORD_CLIENT_ID;
 const fs = require('fs');
 const path = require('path');
 
