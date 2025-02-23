@@ -170,7 +170,6 @@ module.exports = {
                       `• Least Active: **${daysOfWeek[leastActiveDay.day]}** (avg. ${leastActiveDay.average.toFixed(1)} users)`,
                       inline: false
                     },
-                    { name: '🏆 Top Achievers', value: topThree.join('\n') || 'No data', inline: false },
                     { name: '🥇 First Place Champions', value: topFirst.join('\n') || 'No data', inline: false },
                     { name: '🌙 Last Message Masters', value: topLast.join('\n') || 'No data', inline: false },
                     { name: '🌘 Second-Last Specialists', value: topSecondLast.join('\n') || 'No data', inline: false },
