@@ -10,14 +10,13 @@ This is the First Last Races bot, which has all the functionality of First/Last 
     ```
 ## Configuration
 1. Create a `config.json` file in the root directory with the following structure:
-2. Create a service account from Firebase. Download the service account's JSON file and put it in the root directory. Ensure the service account has the following roles: Firebase Admin SDK Administrator Service Agent, Firebase Realtime Database Admin, Service Account Token Creator, Editor, Firebase Service Management Service Agent, and Viewer.
     ```
     {
       "token": "YOUR_DISCORD_BOT_TOKEN",
       "clientId": "YOUR_DISCORD_CLIENT_ID"
     }
     ```
-2. Create a service account from Firebase and download its `serviceAccountKey.json`, and put it in the root directory. Make sure to give the service account all the required scopes, which are: Firebase Admin SDK Administrator Service Agent, Firebase Realtime Database Admin, Service Account Token Creator, Editor, Firebase Service Management Service Agent, and Viewer.
+2. Create a service account from Firebase. Download the service account's JSON file and put it in the root directory. Ensure the service account has the following roles: Firebase Admin SDK Administrator Service Agent, Firebase Realtime Database Admin, Service Account Token Creator, Editor, Firebase Service Management Service Agent, and Viewer.
 3. Go to `src/config/mainConfig.js` and put in all of your values, such as server, main channel, flair announcement channel, points, database, sheet, etc.
 4. You can set holiday dates in `src/config/holidayDates.js`. These dates will be grayed out in your sheet.
 5. You can set optional presence values in `src/functions/presenceModule.js`.
