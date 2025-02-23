@@ -11,6 +11,7 @@ This is the First Last Races bot, which has all the functionality of First/Last 
 ## Configuration
 1. Create a `config.json` file in the root directory with the following structure:
 2. Create a service account from Firebase. Download the service account's JSON file and put it in the root directory. Ensure the service account has the following roles: Firebase Admin SDK Administrator Service Agent, Firebase Realtime Database Admin, Service Account Token Creator, Editor, Firebase Service Management Service Agent, and Viewer.
+    ```
     {
       "token": "YOUR_DISCORD_BOT_TOKEN",
       "clientId": "YOUR_DISCORD_CLIENT_ID"
@@ -39,5 +40,5 @@ This is the First Last Races bot, which has all the functionality of First/Last 
 6. It assigns the second-last message's user 10 points.
 7. Then, it puts all the users in a leaderboard.
 8. It records the history in the database.
-9. it records the history in a google sheet using the Google Sheet API, which is right here: [Google Sheet](https://docs.google.com/spreadsheets/d/1CH85wIWmj0H6zgnjkNtHm_rYIlW_8AFM4z16G44W8ow/edit?gid=0#gid=0).
+9. it records the history in a google sheet using the Google Sheet API.
 
