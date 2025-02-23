@@ -34,5 +34,5 @@ logs/
 .env
 src/config.json
 src/service.json
-.sh
+sync-changes.sh
 src/services/formatYesterday.js
