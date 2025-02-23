@@ -4,10 +4,6 @@ const { Client, Events, Collection, GatewayIntentBits } = require("discord.js");
 const { token } = require("./config.json");
 const path = require('node:path');
 const fs = require('node:fs');
-const { testScoreCalculation } = require('./test/testScorer');
-const presenceModule = require('./functions/presenceModule'); // Adjust the path as necessary 
-
-
 
 class DiscordBotManager {
     constructor() {
@@ -95,8 +91,6 @@ class DiscordBotManager {
 
             console.log('Bot successfully started!');
 
-            // Setup termination listener
-            this.setupTerminationListener();
         } catch (error) {
             console.error('Error starting the bot:', error);
             this.stop();
@@ -115,28 +109,6 @@ class DiscordBotManager {
             console.error('Error stopping the bot:', error);
             process.exit(1);
         }
-    }
-
-    // Setup the termination listener
-    setupTerminationListener() {
-        this.rl.question("Type 'stop' to terminate the bot.\n", async (input) => {
-            if (input.toLowerCase() === 'stop') {
-                await this.stop();
-            } else {
-                this.setupTerminationListener(); // Ask again if input wasn't 'stop'
-            }
-        });
-
-        // Handle process termination signals
-        process.on('SIGINT', async () => {
-            console.log('\nReceived SIGINT signal.');
-            await this.stop();
-        });
-
-        process.on('SIGTERM', async () => {
-            console.log('\nReceived SIGTERM signal.');
-            await this.stop();
-        });
     }
 }
 

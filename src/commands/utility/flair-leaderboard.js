@@ -1,27 +1,7 @@
 const {SlashCommandBuilder,ActionRowBuilder,ButtonBuilder,ButtonStyle,} = require("discord.js");
 const { EmbedBuilder } = require("discord.js");
 const db = require("../../firebase");
-// This is one of the files that only works in the First Last Races Server; because of the role ids
-// Define role tiers
-const ROLE_TIERS = {
-  POINT_GOD: {
-    points: 5000,
-    id: "1336556598998601760",
-    name: "5000 Point God",
-  }, // Highest tier
-  PURPLE: { points: 2000, id: "1336556534217441370", name: "2000 Points" },
-  BLUE: { points: 1000, id: "1336556482220785737", name: "1000 Points" },
-  DARK_GREEN: { points: 500, id: "1336556444954132480", name: "500 Points" },
-  GREEN: { points: 250, id: "1336556322165882893", name: "250 Points" },
-  YELLOW: { points: 100, id: "1336556271075332128", name: "100 Points" },
-  ORANGE: { points: 50, id: "1336555846888325130", name: "50 Points" },
-  FIRST_LAST: {
-    points: 0,
-    id: "1336556008125763714",
-    name: "Got a First/Last",
-  }, // Given if user gets a first or a last; no point requirement
-  RACER: { points: 0, id: "1335822775901749299", name: "Racer" }, // Lowest tier; Default; no point requirement
-};
+const { ROLES } = require("../../config/flairs.js"); // Import the role tiers from the config file
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -32,7 +12,7 @@ module.exports = {
     await interaction.deferReply();
 
     try {
-      const serverId = interaction.guild.id; // Accesses the server in firebase; even though that this only works for the First Last Races server
+      const serverId = interaction.guild.id; // Accesses the server in firebase
       const serverRef = db.collection("servers").doc(serverId);
 
       // Get all users in the server
@@ -40,7 +20,7 @@ module.exports = {
 
       // Create role groups to store users
       const roleGroups = {};
-      Object.keys(ROLE_TIERS).forEach((tier) => {
+      Object.keys(ROLES).forEach((tier) => {
         roleGroups[tier] = [];
       });
 
@@ -59,7 +39,7 @@ module.exports = {
           let highestPoints = -1;
 
           // Check ALL roles the user has and find the highest point role
-          for (const [roleTier, tierData] of Object.entries(ROLE_TIERS)) {
+          for (const [roleTier, tierData] of Object.entries(ROLES)) {
             if (userRoles.has(tierData.id)) {
               // If this is a point role and has more points than current highest
               if (tierData.points > highestPoints) {
@@ -71,9 +51,9 @@ module.exports = {
 
           // If no point roles were found (highestPoints is still -1), check for First/Last and Racer
           if (highestPoints === -1) {
-            if (userRoles.has(ROLE_TIERS.FIRST_LAST.id)) {
+            if (userRoles.has(ROLES.FIRST_LAST.id)) {
               highestTier = "FIRST_LAST";
-            } else if (userRoles.has(ROLE_TIERS.RACER.id)) {
+            } else if (userRoles.has(ROLES.RACER.id)) {
               highestTier = "RACER";
             }
           }
@@ -87,7 +67,7 @@ module.exports = {
           // ...rest of the code remains the same...
           else if (userData.score > 0) {
             // If user has points but no role, add them to the lowest point role they qualify for
-            const qualifyingTier = Object.entries(ROLE_TIERS)
+            const qualifyingTier = Object.entries(ROLES)
               .filter(([_, tierData]) => tierData.points > 0) // Filter out non-point roles
               .sort((a, b) => a[1].points - b[1].points) // Sort ascending
               .find(([_, tierData]) => userData.score >= tierData.points);
@@ -107,7 +87,7 @@ module.exports = {
       const itemsPerPage = 3; // Number of role tiers per page
       
       // Create embed pages
-      const roleTierEntries = Object.entries(ROLE_TIERS);
+      const roleTierEntries = Object.entries(ROLES);
       for (let i = 0; i < roleTierEntries.length; i += itemsPerPage) {
           const pageEmbed = new EmbedBuilder()
               .setTitle("🏆 Flair Leaderboard")

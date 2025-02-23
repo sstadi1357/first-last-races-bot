@@ -19,7 +19,7 @@ module.exports = {
             const leaderboardDoc = await serverRef.collection('leaderboard').doc('current').get();
 
             if (!userDoc.exists) {
-                return await interaction.editReply('You have not participated in any races yet!');
+                return await interaction.editReply('You have not messaged yet!');
             }
 
             const userData = userDoc.data();
