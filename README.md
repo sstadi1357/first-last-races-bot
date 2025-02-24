@@ -29,7 +29,7 @@ Ensure you have the following:
 2. Initialize the project and install dependencies:
    ```bash
    npm init -y
-   npm install discord.js pm2 date-fns firebase-admin googleapis node-cron
+   npm install discord.js pm2 date-fns firebase-admin googleapis node-cron dotenv
    ```
 
 
