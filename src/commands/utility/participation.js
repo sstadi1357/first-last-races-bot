@@ -100,8 +100,7 @@ module.exports = {
                 .addFields({
                     name: '🏆 Most Active Users',
                     value: sortedUsers.map(([userId, stats], index) => 
-                        `${index + 1}. ${userDisplayNames.get(userId)} - ${stats.count} participations ` +
-                        `(${stats.firstPlaces} firsts)`
+                        `${index + 1}. ${userDisplayNames.get(userId)} - ${stats.count} participations ` 
                     ).join('\n') || 'No data',
                     inline: false
                 })

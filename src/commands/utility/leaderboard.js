@@ -34,32 +34,52 @@ module.exports = {
                 return await interaction.editReply('No leaderboard data available.');
             }
 
-            const { rankings, lastUpdated } = leaderboardDoc.data(); // Extract rankings and last updated timestamp from the document
+            const { rankings, lastUpdated } = leaderboardDoc.data();
             
-            // Split rankings into pages of 10 users each
-            const itemsPerPage = 10;
+            let description = '';
+            const maxDescriptionLength = 4096; // Discord's embed description limit
             const pages = [];
-            let currentPage = '';
 
             // Loop through the rankings and create pages
-            for (let i = 0; i < rankings.length; i++) {
-                const user = rankings[i];
-                const member = await interaction.guild.members.fetch(user.userId).catch(() => null); // Fetch the guild member
-                const displayName = member ? member.displayName : user.username; // Use display name if member exists, otherwise use username
-                const positionEmoji = getPositionEmoji(i); // Get the position emoji
-                const entry = `${positionEmoji} **#${i + 1}.** ${displayName} - ${user.score} points\n`; // Create the leaderboard entry
-                
-                // Add entry to the current page and start a new page if needed
-                if (i % itemsPerPage === 0 && i !== 0) {
-                    pages.push(currentPage);
-                    currentPage = '';
-                }
-                currentPage += entry;
-            }
-            if (currentPage) pages.push(currentPage); // Add the last page if it has content
-
-            let currentPageIndex = 0; // Initialize the current page index
-
+                     // Create the full leaderboard description
+                     for (let i = 0; i < rankings.length; i++) {
+                        const user = rankings[i];
+                        const member = await interaction.guild.members.fetch(user.userId).catch(() => null);
+                        const displayName = member ? member.displayName : user.username;
+                        const positionEmoji = getPositionEmoji(i);
+                        const entry = `${positionEmoji} **#${i + 1}.** ${displayName} - ${user.score} points\n`;
+                        
+                        // If adding this entry would exceed the limit, create a new page
+                        if (description.length + entry.length > maxDescriptionLength) {
+                            pages.push(description);
+                            description = entry;
+                        } else {
+                            description += entry;
+                        }
+                    }
+                    
+                    // Add the remaining description as the last page
+                    if (description) {
+                        pages.push(description);
+                    }
+        
+                    // If we only have one page within limits, send a simple embed
+                    if (pages.length <= 1) {
+                        const embed = new EmbedBuilder()
+                            .setColor('#0099FF')
+                            .setTitle('🏆 Current Leaderboard')
+                            .setDescription(description)
+                            .setFooter({ 
+                                text: `Last updated: ${lastUpdated ? new Date(lastUpdated.toDate()).toLocaleString() : 'Unknown'}`
+                            })
+                            .setTimestamp();
+        
+                        return await interaction.editReply({ embeds: [embed] });
+                    }
+        
+                    // If we need pagination, use the existing pagination code
+                    let currentPageIndex = 0;
+                    
             // Function to generate an embed for a specific page
             const generateEmbed = (pageIndex) => {
                 return new EmbedBuilder()
@@ -104,13 +124,10 @@ module.exports = {
             // Send the initial response with the first page of the leaderboard
             const response = await interaction.editReply({
                 embeds: [generateEmbed(currentPageIndex)],
-                components: pages.length > 1 ? [generateButtons(currentPageIndex)] : [] // Add buttons if there are multiple pages
+                components: [generateButtons(currentPageIndex)]
             });
 
-            // If there are multiple pages, set up a collector to handle button interactions
-            if (pages.length > 1) {
-                const collector = response.createMessageComponentCollector({ time: 300000 }); // Collector active for 5 minutes
-
+            const collector = response.createMessageComponentCollector({ time: 300000 });
                 // Handle button interactions
                 collector.on('collect', async (i) => {
                     if (i.user.id !== interaction.user.id) {
@@ -137,13 +154,13 @@ module.exports = {
                 collector.on('end', async () => {
                     await response.edit({ components: [] }).catch(() => {});
                 });
+    
+            } catch (error) {
+                console.error('Error fetching leaderboard:', error);
+                await interaction.editReply({
+                    content: 'An error occurred while retrieving the leaderboard. Please try again later.',
+                    ephemeral: true
+                });
             }
-        } catch (error) {
-            console.error('Error fetching leaderboard:', error);
-            await interaction.editReply({
-                content: 'An error occurred while retrieving the leaderboard. Please try again later.',
-                ephemeral: true
-            });
-        }
-    },
-};
+        },
+    };
