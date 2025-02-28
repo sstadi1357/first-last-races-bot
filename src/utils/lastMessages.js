@@ -65,7 +65,8 @@ async function getLastMessages(guild, startOfDay, endOfDay) {
     lastMessageInfo = {
       userId: sortedMessages[0].author.id,
       username: sortedMessages[0].author.username,
-      timestamp: formatTimestamp(sortedMessages[0].createdTimestamp)
+      timestamp: formatTimestamp(sortedMessages[0].createdTimestamp),
+      messageId: sortedMessages[0].id  // Added message ID
     };
     console.log(`Last message in races channel by: ${lastMessageInfo.username}`);
 
@@ -78,7 +79,8 @@ async function getLastMessages(guild, startOfDay, endOfDay) {
       secondLastMessageInfo = {
         userId: secondLastMessage.author.id,
         username: secondLastMessage.author.username,
-        timestamp: formatTimestamp(secondLastMessage.createdTimestamp)
+        timestamp: formatTimestamp(secondLastMessage.createdTimestamp),
+        messageId: secondLastMessage.id  // Added message ID
       };
       console.log(`Second last message in races channel by: ${secondLastMessageInfo.username}`);
     } else {

@@ -72,6 +72,7 @@ function startScheduler(client) {
                 console.log('\n🔎 Fetching last messages from Discord...');
                 const { lastMessageInfo, secondLastMessageInfo } = await getLastMessages(guild, startOfDay, endOfDay);
                 
+                // Now lastMessageInfo and secondLastMessageInfo will include messageId property
                 console.log('\n💾 Storing last messages in Firestore...');
                 await storeLastMessages(serverDocRef, dateStr, lastMessageInfo, secondLastMessageInfo);
 
