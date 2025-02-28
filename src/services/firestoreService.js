@@ -102,11 +102,13 @@ async function storeLastMessages(serverDocRef, date, lastMessageInfo, secondLast
         last: lastMessageInfo ? {
           userId: lastMessageInfo.userId,
           username: lastMessageInfo.username,
+          messageId: lastMessageInfo.messageId,
           timestamp: lastMessageInfo.timestamp
         } : null,
         secondLast: secondLastMessageInfo ? {
           userId: secondLastMessageInfo.userId,
           username: secondLastMessageInfo.username,
+          messageId: secondLastMessageInfo.messageId,
           timestamp: secondLastMessageInfo.timestamp
         } : null
       }
