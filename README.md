@@ -10,7 +10,6 @@ The **First Last Races Bot** is based on the game First Last Races. If you do no
 - Stores data in **Firebase Firestore** and **Google Sheets**.
 - Customizable settings for server configuration, holiday dates, and presence status.
 
-
 ## Installation
 
 ### Prerequisites
@@ -32,7 +31,6 @@ Ensure you have the following:
    npm install discord.js pm2 date-fns firebase-admin googleapis node-cron dotenv
    ```
 
-
 ## Configuration
 
 ### 1. **Discord Bot Token**
@@ -46,11 +44,6 @@ Ensure you have the following:
 3. Go to `src/config/mainConfig.js` and put in all of your values, such as server, main channel, flair announcement channel, points, database, sheet, etc.
 4. You can set holiday dates in `src/config/holidayDates.js`. These dates will be grayed out in your sheet.
 5. You can set optional presence values in `src/functions/presenceModule.js`.
-1. Create a config.json in the root directory and put in your "token" and your "clientId" in the root with a string.
-2. Create a service account from firebase and download its service.json, and put it in the root. Make sure to give the service account all the required scopes, which are, Firebase Admin SDK Administrator Service Agent, Firebase Realtime Database Admin, Service Account Token Creator, Editor, Firebase Service Management Service Agent, and Viewer.
-3. Go to src/config/mainConfig.js and put in all of your values, such as server, main channel, flair announcement channel, points, database, sheet etc.
-4. You can set holiday dates in src/config/holidayDates.js. These dates will be grayed out in your sheet.
-5. You can set optional presence values in src/functions/presenceModule.js
 
 ### 2. **Firebase Setup**
 
@@ -84,7 +77,6 @@ Ensure you have the following:
 2. Set holiday dates in `src/config/holidayDates.js`. These dates will be grayed out in the sheet.
 3. Customize optional presence values in `src/functions/presenceModule.js`.
 
-
 ## How It Works
 
 1. The bot listens for messages in the server.
@@ -99,7 +91,6 @@ Ensure you have the following:
 6. The history is stored in:
    1. **Firebase Firestore** for long-term storage.
    2. **Google Sheets** using the Google Sheets API for a visual representation.
-
 
 ## Getting Started
 
