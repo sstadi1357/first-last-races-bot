@@ -156,8 +156,8 @@ async function applyHeaderFormatting(sheetId) {
                                           green: 0.0,
                                           blue: 0.0
                                       },
-                                      fontSize: 12,
-                                      bold: true
+                                      fontSize: 10,
+                                      bold: false
                                   }
                               }
                           },
@@ -245,9 +245,11 @@ async function formatMessageHistory() {
                 }
             }
 
-            const [month, day, year] = dateStr.split('-');
-            const formattedDate = `${year}-${month}-${day}`;
-
+            // Change date format from MM-DD-YYYY to MM/DD/YYYY for consistency with sheet formatting
+                        //
+         // With this new code
+         const [month, day, year] = dateStr.split('-');
+        const formattedDate = `${month}/${day}`;
             const newRow = [
                 formattedDate,
                 startTime,
