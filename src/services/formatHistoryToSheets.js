@@ -3,7 +3,9 @@ const db = require('../firebase');
 const sheets = require('../sheets');
 const { format, parseISO, isValid } = require('date-fns');
 const { shouldBeGray } = require('../config/holidayDates');
-const { serverId, spreadsheetId, users } = require('../config/mainConfig');   
+const { serverId, spreadsheetId } = require('../config/mainConfig');
+const { generateUserFormatRules, fetchUsersFromSheet } = require('../utils/userFormatting');
+
 // Configure the spreadsheet details
 const SPREADSHEET_ID = spreadsheetId;
 const SERVER_ID = serverId;
@@ -16,71 +18,6 @@ const GRAY_BACKGROUND = {
         blue: 0.8
     }
 };
-function shouldUseWhiteText(rgb) {
-    // Calculate relative luminance using the formula
-    // See: https://www.w3.org/TR/WCAG20-TECHS/G17.html
-    const r = rgb[0] / 255;
-    const g = rgb[1] / 255;
-    const b = rgb[2] / 255;
-    
-    // Weighted luminance calculation (perception-based)
-    const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-    
-    // Use white text if background is dark (luminance < 0.5)
-    return luminance < 0.5;
-}
-// Function to generate user conditional formatting rules
-function generateUserFormatRules(sheetId) {
-    users.push({ username: 'NONE', rgb: [153, 153, 153] });
-    const userFormatRules = [];
-    
-    if (!users || !Array.isArray(users)) {
-        console.log('No users array found in mainConfig');
-        return userFormatRules;
-    }
-    
-    users.forEach((user, index) => {
-        if (!user.rgb || user.rgb.length !== 3) {
-            console.log(`Skipping user ${user.username} - missing RGB values`);
-            return;
-        }
-        
-        userFormatRules.push({
-            addConditionalFormatRule: {
-                rule: {
-                    ranges: [{
-                        sheetId: sheetId,
-                        startRowIndex: 1  // Skip header row
-                    }],
-                    booleanRule: {
-                        condition: {
-                            type: "TEXT_CONTAINS",
-                            values: [{
-                                userEnteredValue: user.username
-                            }]
-                        },
-                        format: {
-                            backgroundColor: {
-                                red: user.rgb[0] / 255,
-                                green: user.rgb[1] / 255,
-                                blue: user.rgb[2] / 255
-                            },
-                            // Add text color based on background brightness
-                            textFormat: {
-                                foregroundColor: shouldUseWhiteText(user.rgb) ? 
-                                    { red: 1, green: 1, blue: 1 } : 
-                                    { red: 0, green: 0, blue: 0 }
-                            }
-                        }
-                    }
-                },
-                index: index + 2  // Start after the time-based formatting rules
-            }
-        });
-    });
-    
-    return userFormatRules;
-}
 
 // Function to safely parse timestamp
 function parseTimestamp(timestamp) {
@@ -116,9 +53,8 @@ function getMonthName(month) {
 
 function getSheetName(dateStr) {
     const [month,, year] = dateStr.split('-');
-    return `${getMonthName(parseInt(month))} ${year}`;
+    return `${getMonthName(parseInt(month))}_${year}`.replace(/\s+/g, '_');
 }
-
 async function getOrCreateSheet(sheetName) {
     try {
         const spreadsheet = await sheets.spreadsheets.get({
@@ -355,12 +291,9 @@ async function applyConditionalFormatting(sheetId, { headers }) {
             }
         ];
         
-        // Add user-specific conditional formatting rules
-        if (users && users.length > 0) {
-            console.log(`Adding conditional formatting for ${users.length} users`);
-            const userRules = generateUserFormatRules(sheetId);
-            requests.push(...userRules);
-        }
+        // Add user-specific conditional formatting rules from the imported module
+        const userRules = await generateUserFormatRules(sheetId);
+        requests.push(...userRules);
         
         await sheets.spreadsheets.batchUpdate({
             spreadsheetId: SPREADSHEET_ID,

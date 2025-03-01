@@ -11,22 +11,22 @@ const mainChannelId = ('1300198975437275147')
 const flairAnnouncementChannelId = '1336557845558333470'; 
 // the users is for conditional formatting for the sheet, you don't need it if you're not using a google sheet
 const users = [
-  { username: "sstadi1357", rgb: [152, 0, 0] },
-  { username: "mathdude_314", rgb: [255, 255, 0] },
-  { username: "iamgod289", rgb: [0, 255, 0] },
-  { username: "monkeyfury13", rgb: [255, 153, 0] },
-  { username: "_g.l.i.t.c.h_", rgb: [0, 0, 0] },
-  { username: "greekdrakon783", rgb: [249, 203, 156] },
-  { username: "simbapuffleikfood", rgb: [74, 134, 232] },
-  { username: "dafish0838", rgb: [182, 215, 168] },
-  { username: "echow916", rgb: [120, 63, 4] },
-  { username: "winterscroll908_31230", rgb: [153, 0, 255] },
-  { username: "bob05956", rgb: [39, 78, 19] },
-  { username: "lr_better", rgb: [0, 255, 255] },
-  { username: "the_amazing_lizard", rgb: [234, 153, 153] },
-  { username: "kb1234567890", rgb: [12, 52, 61] },
-  { username: "prec1sebee", rgb: [255, 0, 255] },
-  { username: "lightningkrish1217", rgb: [118, 165, 175] }
+  { username: "sstadi1357", hexColor: "#980000" },
+  { username: "mathdude_314", hexColor: "#FFFF00" },
+  { username: "iamgod289", hexColor: "#00FF00" },
+  { username: "monkeyfury13", hexColor: "#FF9900" },
+  { username: "_g.l.i.t.c.h_", hexColor: "#000000" },
+  { username: "greekdrakon783", hexColor: "#F9CB9C" },
+  { username: "simbapuffleikfood", hexColor: "#4A86E8" },
+  { username: "dafish0838", hexColor: "#B6D7A8" },
+  { username: "echow916", hexColor: "#783F04" },
+  { username: "winterscroll908_31230", hexColor: "#9900FF" },
+  { username: "bob05956", hexColor: "#274E13" },
+  { username: "lr_better", hexColor: "#00FFFF" },
+  { username: "the_amazing_lizard", hexColor: "#EA9999" },
+  { username: "kb1234567890", hexColor: "#0C343D" },
+  { username: "prec1sebee", hexColor: "#FF00FF" },
+  { username: "lightningkrish1217", hexColor: "#76A5AF" }
 ];
 
 //You can keep the rest of these as is, or you can change them to customize it.
