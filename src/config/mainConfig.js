@@ -1,6 +1,4 @@
 //You need to change the first 6 variables to your own links and server settings and users and colors. 
-//Add more users if you need to and change the roles and points if you want to.
-//You can also change the flair announcement message if you want to.
 
 const serverId = ('1300198974988357732')
 
