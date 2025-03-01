@@ -1,4 +1,6 @@
-//You need to change the first 5 variables to your own links and server settings
+//You need to change the first 6 variables to your own links and server settings and users and colors. 
+//Add more users if you need to and change the roles and points if you want to.
+//You can also change the flair announcement message if you want to.
 
 const serverId = ('1300198974988357732')
 
@@ -9,6 +11,25 @@ const spreadsheetId = ('1CH85wIWmj0H6zgnjkNtHm_rYIlW_8AFM4z16G44W8ow')
 const mainChannelId = ('1300198975437275147')
 
 const flairAnnouncementChannelId = '1336557845558333470'; 
+// the users is for conditional formatting for the sheet, you don't need it if you're not using a google sheet
+const users = [
+  { username: "sstadi1357", rgb: [152, 0, 0] },
+  { username: "mathdude_314", rgb: [255, 255, 0] },
+  { username: "iamgod289", rgb: [0, 255, 0] },
+  { username: "monkeyfury13", rgb: [255, 153, 0] },
+  { username: "_g.l.i.t.c.h_", rgb: [0, 0, 0] },
+  { username: "greekdrakon783", rgb: [249, 203, 156] },
+  { username: "simbapuffleikfood", rgb: [74, 134, 232] },
+  { username: "dafish0838", rgb: [182, 215, 168] },
+  { username: "echow916", rgb: [120, 63, 4] },
+  { username: "winterscroll908_31230", rgb: [153, 0, 255] },
+  { username: "bob05956", rgb: [39, 78, 19] },
+  { username: "lr_better", rgb: [0, 255, 255] },
+  { username: "the_amazing_lizard", rgb: [234, 153, 153] },
+  { username: "kb1234567890", rgb: [12, 52, 61] },
+  { username: "prec1sebee", rgb: [255, 0, 255] },
+  { username: "lightningkrish1217", rgb: [118, 165, 175] }
+];
 
 //You can keep the rest of these as is, or you can change them to customize it.
 
@@ -65,5 +86,6 @@ module.exports = {
     flairAnnouncementChannelId,
     ROLES,
     scoring,
-    cronSchedule
+    cronSchedule,
+    users
 }

@@ -74,6 +74,7 @@ Ensure you have the following:
    6. Roles
    7. Points Settings
    8. Scheduler
+   9. Users and their colors (Only if you're using the google sheet.)
 2. Set holiday dates in `src/config/holidayDates.js`. These dates will be grayed out in the sheet.
 3. Customize optional presence values in `src/functions/presenceModule.js`.
 
