@@ -1,6 +1,6 @@
 # First Last Races Bot
 
-The **First Last Races Bot** is based on the game First Last Races. If you do not know how to play the game, look at the rules [here](https://docs.google.com/document/d/1hvLfb2FHRatZ4jjcHOTxkN4P5Ten2Qv7lt4jRBHvk2Q/edit?tab=t.0). The **First Last Races Bot** is designed to track and rank the first and last messages sent by users in a Discord server each day. The bot records timestamps, assigns points, maintains leaderboards, and integrates with Firebase and Google Sheets for data storage. Most of the code is commented for clarity.
+The **First Last Races Bot** is designed to track and rank the first and last messages sent by users in a Discord server each day. The bot records timestamps, assigns points, maintains leaderboards, and integrates with Firebase and Google Sheets for data storage. Most of the code is commented for clarity.
 
 ## Features
 
@@ -20,63 +20,52 @@ Ensure you have the following:
 
 ### Setup Instructions
 
-1. Create a new folder and clone the repository:
+1. Clone the repository:
    ```bash
-   mkdir First_Last_Races
    git clone https://github.com/sstadi1357/first-last-races-bot.git
+   cd first-last-races-bot
    ```
-2. Initialize the project and install dependencies:
+2. Install dependencies:
    ```bash
-   npm init -y
    npm install discord.js pm2 date-fns firebase-admin googleapis node-cron dotenv
    ```
 
 ## Configuration
 
-### 1. **Discord Bot Token**
+### 1. **Discord Bot Setup**
 
-1. Create a `.env` file in the 'src' folder with the following structure:
-    ```
-    DISCORD_TOKEN=your_discord_bot_token_here
-    CLIENT_ID=your_discord_bot_client_id_here
-    ```
-2. Create a service account from Firebase. Download the service account's JSON file and put it in the root directory. Ensure the service account has the following roles: Firebase Admin SDK Administrator Service Agent, Firebase Realtime Database Admin, Service Account Token Creator, Editor, Firebase Service Management Service Agent, and Viewer.
-3. Go to `src/config/mainConfig.js` and put in all of your values, such as server, main channel, flair announcement channel, points, database, sheet, etc.
-4. You can set holiday dates in `src/config/holidayDates.js`. These dates will be grayed out in your sheet.
-5. You can set optional presence values in `src/functions/presenceModule.js`.
+1. Create a `.env` file in the `src` folder:
+   ```
+   DISCORD_TOKEN=your_discord_bot_token_here
+   CLIENT_ID=your_discord_bot_client_id_here
+   ```
+2. Configure settings in ``src/config/mainConfig.json``:
+   - Server ID
+   - Database and Google Sheets integration
+   - Channels and roles
+   - Points system
+   - Scheduler options
+3. Set holiday dates in `src/config/holidayDates.js` (grayed out in the sheet).
+4. Customize presence values in `src/functions/presenceModule.js`.
 
 ### 2. **Firebase Setup**
 
 1. Create a Firebase project and generate a service account key.
 2. Download the JSON key file and place it in the root directory.
 3. Ensure the service account has the following roles:
-   1. Firebase Admin SDK Administrator Service Agent
-   2. Firebase Realtime Database Admin
-   3. Service Account Token Creator
-   4. Editor
-   5. Firebase Service Management Service Agent
-   6. Viewer
+   - Firebase Admin SDK Administrator Service Agent
+   - Firebase Realtime Database Admin
+   - Service Account Token Creator
+   - Editor
+   - Firebase Service Management Service Agent
+   - Viewer
 
 ### 3. **Google Sheets Setup**
 
-1. Go to your project in Google Cloud.
-2. Enable the Google Sheets API.
-3. Create a new sheet and save the Sheet ID.
-
-### 4. **Additional Configurations**
-
-1. Edit `src/config/mainConfig.js` to specify:
-   1. Server ID
-   2. Firebase Firestore Database ID
-   3. Google Sheets Spreadsheet ID
-   4. Main Channel ID
-   5. Flair Announcement Channel ID
-   6. Roles
-   7. Points Settings
-   8. Scheduler
-   9. Users and their colors (Only if you're using the google sheet.)
-2. Set holiday dates in `src/config/holidayDates.js`. These dates will be grayed out in the sheet.
-3. Customize optional presence values in `src/functions/presenceModule.js`.
+1. Enable the Google Sheets API in Google Cloud.
+2. Create a new sheet and save the Sheet ID.
+3. Add the Sheet ID to `src/config/mainConfig.js`.
+4. Adjust the users and and their color values in `src/config/mainConfig.js`.
 
 ## How It Works
 
@@ -84,14 +73,12 @@ Ensure you have the following:
 2. If a user sends their first message of the day, it is recorded in the database.
 3. Messages sent after the first one by the same user are ignored for ranking purposes.
 4. At the end of the day:
-   1. The first user to send a message gets **20 points**.
-   2. The second user gets **12 points**, the third user gets **10 points**, and so on.
-   3. The last user to send a message receives **20 bonus points**.
-   4. The second-last user gets **10 bonus points**.
+   - The first user to send a message gets **20 points**.
+   - The second user gets **12 points**, the third user gets **10 points**, and so on.
+   - The last user to send a message receives **20 bonus points**.
+   - The second-last user gets **10 bonus points**.
 5. A leaderboard is generated based on accumulated points.
-6. The history is stored in:
-   1. **Firebase Firestore** for long-term storage.
-   2. **Google Sheets** using the Google Sheets API for a visual representation.
+6. The history is stored in **Firebase Firestore** and **Google Sheets**.
 
 ## Getting Started
 
@@ -107,3 +94,4 @@ Ensure you have the following:
    ```bash
    pm2 logs first-last-races-bot
    ```
+
