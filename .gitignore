@@ -29,7 +29,8 @@ logs/
 .vscode/
 .idea/
 *.iml
-
+package-lock.json
+package.json
 # Ignore environment and config files
 .env
 service.json
