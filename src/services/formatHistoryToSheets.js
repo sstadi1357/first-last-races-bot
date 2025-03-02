@@ -154,7 +154,7 @@ async function applyConditionalFormatting(sheetId, { headers }) {
             console.error('Error fetching existing conditional formats:', fetchError);
         }
 
-        // First, delete existing rules in a separate batch update
+        // First, delete all existing rules in a separate batch update
         if (existingRules.length > 0) {
             const deleteRequests = existingRules.map((rule, index) => ({
                 deleteConditionalFormatRule: {
@@ -169,7 +169,7 @@ async function applyConditionalFormatting(sheetId, { headers }) {
             });
         }
 
-        // Then, add new rules in another batch update
+        // Prepare add requests
         const addRequests = [
             // Start Time color scale (green to red) - earlier is better (green)
             {
@@ -398,11 +398,14 @@ async function formatMessageHistory() {
             });
             await applyHeaderFormatting(sheetId);      
         }
-        await applyConditionalFormatting(sheetId, { headers });
+       
+        
         const sortedDates = Array.from(monthData.keys()).sort();
         const valueUpdates = [];
         const formatRequests = [];
         let currentRow = 2;
+
+        const usernamesInNewRows = new Set();
 
         for (const dateStr of sortedDates) {
             const newRow = monthData.get(dateStr);
@@ -413,18 +416,20 @@ async function formatMessageHistory() {
                 values: [newRow]
             });
 
+            // Collect usernames from this specific row
+            newRow.slice(2, -2).forEach(username => {
+                if (username !== 'NONE') {
+                    usernamesInNewRows.add(username);
+                }
+            });
+
             // Check if the date should be gray (with proper date formatting)
             try {
-                // Format date string properly for shouldBeGray function
-                // formattedDate is in MM/DD format, we need YYYY-MM-DD
                 const currentYear = new Date().getFullYear();
                 const [month, day] = formattedDate.split('/');
                 const dateForChecking = `${currentYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
                 
-                console.log(`Checking date ${formattedDate} (converted to ${dateForChecking})`);
-                
                 const shouldBeGrayBackground = shouldBeGray(dateForChecking);
-                console.log(`Date ${dateForChecking} should be gray: ${shouldBeGrayBackground}`);
                 
                 if (shouldBeGrayBackground) {
                     formatRequests.push({
@@ -467,6 +472,43 @@ async function formatMessageHistory() {
                 }
             });
         }
+
+        // Check for users in new rows without background color rules
+        const spreadsheet = await sheets.spreadsheets.get({
+            spreadsheetId: SPREADSHEET_ID,
+            includeGridData: true
+        });
+        
+        const sheet = spreadsheet.data.sheets.find(s => s.properties.title === sheetName);
+        const existingRules = sheet.conditionalFormats.filter(
+            rule => rule.booleanRule && 
+            rule.booleanRule.condition.type === "TEXT_CONTAINS"
+        );
+
+        const existingUsernames = existingRules.map(rule => 
+            rule.booleanRule.condition.values[0].userEnteredValue
+        );
+
+        // Identify usernames without rules from the new rows
+        const missingUsernameRules = [...usernamesInNewRows].filter(
+            username => !existingUsernames.includes(username)
+        );
+
+        // If there are usernames without rules, add them
+        if (missingUsernameRules.length > 0) {
+            console.log('Usernames without background color rules:', missingUsernameRules);
+            
+            // Use the addNewUserToSheet function from userFormatting
+            const { addNewUserToSheet } = require('../utils/userFormatting');
+            
+            for (const username of missingUsernameRules) {
+                await addNewUserToSheet(username);
+            }
+
+            // Immediately add conditional formatting rules for new users
+            
+        }
+        await applyConditionalFormatting(sheetId, { headers });
 
         // Auto-resize columns
         await sheets.spreadsheets.batchUpdate({

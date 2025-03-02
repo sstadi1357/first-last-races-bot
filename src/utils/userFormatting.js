@@ -111,35 +111,10 @@ async function generateUserFormatRules(sheetId) {
         // Add 'NONE' user
         usersData.push({ username: 'NONE', hexColor: '#999999' });
         console.log(`Added 'NONE' user with gray color. Total users: ${usersData.length}`);
-        
-        // First, get existing conditional format rules to delete
-        let existingRules = [];
-        try {
-            const spreadsheet = await sheets.spreadsheets.get({
-                spreadsheetId,
-                includeGridData: true
-            });
-            
-            const sheet = spreadsheet.data.sheets.find(s => s.properties.sheetId === sheetId);
-            if (sheet && sheet.conditionalFormats) {
-                existingRules = sheet.conditionalFormats;
-            }
-        } catch (fetchError) {
-            console.error('Error fetching existing conditional formats:', fetchError);
-        }
 
-        const formatRequests = [];
+        // Prepare addition requests for new rules
+        const addRequests = [];
         
-        // Delete all existing conditional formatting rules
-        existingRules.forEach((rule, index) => {
-            formatRequests.push({
-                deleteConditionalFormatRule: {
-                    sheetId: sheetId,
-                    index: index
-                }
-            });
-        });
-
         // Add new rules for each user
         usersData.forEach((user, index) => {
             if (!user.hexColor) {
@@ -151,7 +126,7 @@ async function generateUserFormatRules(sheetId) {
             console.log(`Creating format rule for user: ${user.username} with color ${user.hexColor}`);
             const rgb = hexToRgb(user.hexColor);
             
-            formatRequests.push({
+            addRequests.push({
                 addConditionalFormatRule: {
                     rule: {
                         ranges: [{
@@ -186,8 +161,8 @@ async function generateUserFormatRules(sheetId) {
             console.log(`Added format rule for user ${user.username}`);
         });
         
-        console.log(`Generated ${formatRequests.length} formatting requests in total`);
-        return formatRequests;
+        console.log(`Generated ${addRequests.length} formatting requests in total`);
+        return addRequests;
     } catch (error) {
         console.error('Error generating user format rules:', error);
         return [];
