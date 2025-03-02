@@ -118,7 +118,7 @@ async function addNewUserToSheet(username) {
         return { username, hexColor: newHexColor };
     } catch (error) {
         console.error('Error adding new user to sheet:', error);
-        return null;
+        return false;
     }
 }
 async function generateUserFormatRules(sheetId) {

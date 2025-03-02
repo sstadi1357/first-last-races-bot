@@ -230,8 +230,15 @@ async function applyConditionalFormatting({ headers }) {
         throw error;
     }
 }
+if (!SPREADSHEET_ID) {
+    console.error('No spreadsheet ID configured in mainConfig.js');
+}
 async function formatMessageHistory() {
     try {
+        if (!SPREADSHEET_ID) {
+            console.error('No spreadsheet ID available. Skipping sheet updates.');
+            return;
+        }
         const { headers, maxPositions } = await getMaxPositionsAndCreateHeaders();
         
         // Get current month and year
