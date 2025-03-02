@@ -20,13 +20,16 @@ Ensure you have the following:
 
 ### Setup Instructions
 
-1. Clone the repository:
+1. Create a root folder
+
+2. Clone the repository:
    ```bash
+   cd YOUR_ROOT_FOLDER_HERE
    git clone https://github.com/sstadi1357/first-last-races-bot.git
-   cd first-last-races-bot
    ```
-2. Install dependencies:
+3. Setup and install dependencies:
    ```bash
+   npm init -y
    npm install discord.js pm2 date-fns firebase-admin googleapis node-cron dotenv
    ```
 
