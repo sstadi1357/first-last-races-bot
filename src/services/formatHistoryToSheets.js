@@ -129,79 +129,48 @@ async function getMaxPositionsAndCreateHeaders() {
     return { headers, maxPositions };
 }
 
-async function applyHeaderFormatting(sheetId) {
-    try {
-        const request = {
-            spreadsheetId: SPREADSHEET_ID,
-            resource: {
-                requests: [
-                    {
-                        repeatCell: {
-                            range: {
-                                sheetId: sheetId,
-                                startRowIndex: 0,
-                                endRowIndex: 1
-                            },
-                            cell: {
-                                userEnteredFormat: {
-                                    backgroundColor: {
-                                        red: 1.0,
-                                        green: 1.0,
-                                        blue: 1.0
-                                    },
-                                    horizontalAlignment: "CENTER",
-                                    textFormat: {
-                                        foregroundColor: {
-                                            red: 0.0,
-                                            green: 0.0,
-                                            blue: 0.0
-                                        },
-                                        fontSize: 10,
-                                        bold: false
-                                    }
-                                }
-                            },
-                            fields: "userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)"
-                        }
-                    },
-                    {
-                        updateSheetProperties: {
-                            properties: {
-                                sheetId: sheetId,
-                                gridProperties: {
-                                    frozenRowCount: 1
-                                }
-                            },
-                            fields: "gridProperties.frozenRowCount"
-                        }
-                    }
-                ]
-            }
-        };
-
-        await sheets.spreadsheets.batchUpdate(request);
-    } catch (error) {
-        console.error('Error applying header formatting:', error);
-        throw error;
-    }
-}
-
-// Apply conditional formatting for time columns and user colors
 async function applyConditionalFormatting(sheetId, { headers }) {
     try {
-        console.log('Applying conditional formatting to new sheet...');
-        
-        // Start Time is always column B (index 1)
-        const startTimeIndex = 1;
-        
-        // For End Time, use a broad range that covers columns C through Z
+        // Define column indices
+        const startTimeIndex = 1;  // Column B
         const endTimeRangeStart = 2;    // Column C
         const endTimeRangeEnd = 25;     // Column Z
         
-        console.log(`Applying formatting to Start Time (column B) and End Time (using broad range C through Z)`);
+        console.log('Applying conditional formatting to sheet...');
         
-        // Create basic conditional formatting rules for time columns
-        const requests = [
+        // First, get existing conditional format rules to delete
+        let existingRules = [];
+        try {
+            const spreadsheet = await sheets.spreadsheets.get({
+                spreadsheetId: SPREADSHEET_ID,
+                includeGridData: true
+            });
+            
+            const sheet = spreadsheet.data.sheets.find(s => s.properties.sheetId === sheetId);
+            if (sheet && sheet.conditionalFormats) {
+                existingRules = sheet.conditionalFormats;
+            }
+        } catch (fetchError) {
+            console.error('Error fetching existing conditional formats:', fetchError);
+        }
+
+        // First, delete existing rules in a separate batch update
+        if (existingRules.length > 0) {
+            const deleteRequests = existingRules.map((rule, index) => ({
+                deleteConditionalFormatRule: {
+                    sheetId: sheetId,
+                    index: 0  // Always delete from index 0
+                }
+            }));
+
+            await sheets.spreadsheets.batchUpdate({
+                spreadsheetId: SPREADSHEET_ID,
+                resource: { requests: deleteRequests }
+            });
+        }
+
+        // Then, add new rules in another batch update
+        const addRequests = [
             // Start Time color scale (green to red) - earlier is better (green)
             {
                 addConditionalFormatRule: {
@@ -290,14 +259,15 @@ async function applyConditionalFormatting(sheetId, { headers }) {
                 }
             }
         ];
-        
-        // Add user-specific conditional formatting rules from the imported module
+
+        // Add user-specific conditional formatting rules
         const userRules = await generateUserFormatRules(sheetId);
-        requests.push(...userRules);
+        addRequests.push(...userRules);
         
+        // Perform the add rules batch update
         await sheets.spreadsheets.batchUpdate({
             spreadsheetId: SPREADSHEET_ID,
-            resource: { requests }
+            resource: { requests: addRequests }
         });
         
         console.log('Conditional formatting applied successfully');
@@ -306,7 +276,6 @@ async function applyConditionalFormatting(sheetId, { headers }) {
         throw error;
     }
 }
-
 async function formatMessageHistory() {
     try {
         const { headers, maxPositions } = await getMaxPositionsAndCreateHeaders();
@@ -427,14 +396,9 @@ async function formatMessageHistory() {
                     values: [headers]
                 }
             });
-            await applyHeaderFormatting(sheetId);
-            
-            // Apply conditional formatting for newly created sheets only
-            if (!exists) {
-                await applyConditionalFormatting(sheetId, { headers });
-            }
+            await applyHeaderFormatting(sheetId);      
         }
-
+        await applyConditionalFormatting(sheetId, { headers });
         const sortedDates = Array.from(monthData.keys()).sort();
         const valueUpdates = [];
         const formatRequests = [];

@@ -10,6 +10,9 @@ const mainChannelId = ('1300198975437275147')
 
 const flairAnnouncementChannelId = '1336557845558333470'; 
 // the users is for conditional formatting for the sheet, you don't need it if you're not using a google sheet
+/*
+If you are using a Google Sheet, and you want to set the users and their colors there, create a sheet called "Users" and put the usernames
+in column A and the hex colors in column B (Skip row 1 for headers).*/
 const users = [
   { username: "sstadi1357", hexColor: "#980000" },
   { username: "mathdude_314", hexColor: "#FFFF00" },
@@ -28,6 +31,7 @@ const users = [
   { username: "prec1sebee", hexColor: "#FF00FF" },
   { username: "lightningkrish1217", hexColor: "#76A5AF" }
 ];
+
 
 //You can keep the rest of these as is, or you can change them to customize it.
 
