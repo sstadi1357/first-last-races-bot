@@ -4,7 +4,7 @@ const sheets = require('../sheets');
 const { format, parseISO, isValid } = require('date-fns');
 const { shouldBeGray } = require('../config/holidayDates');
 const { serverId, spreadsheetId } = require('../config/mainConfig');
-const { generateUserFormatRules, fetchUsersFromSheet } = require('../utils/userFormatting');
+const { generateUserFormatRules, addNewUserToSheet, fetchUsersFromSheet } = require('../utils/userFormatting');
 
 // Configure the spreadsheet details
 const SPREADSHEET_ID = spreadsheetId;
@@ -129,148 +129,102 @@ async function getMaxPositionsAndCreateHeaders() {
     return { headers, maxPositions };
 }
 
-async function applyConditionalFormatting(sheetId, { headers }) {
+async function applyConditionalFormatting({ headers }) {
     try {
-        // Define column indices
-        const startTimeIndex = 1;  // Column B
-        const endTimeRangeStart = 2;    // Column C
-        const endTimeRangeEnd = 25;     // Column Z
+        console.log('Applying conditional formatting to all sheets...');
         
-        console.log('Applying conditional formatting to sheet...');
+        const spreadsheet = await sheets.spreadsheets.get({
+            spreadsheetId: SPREADSHEET_ID,
+            includeGridData: true
+        });
         
-        // First, get existing conditional format rules to delete
-        let existingRules = [];
-        try {
-            const spreadsheet = await sheets.spreadsheets.get({
-                spreadsheetId: SPREADSHEET_ID,
-                includeGridData: true
-            });
-            
-            const sheet = spreadsheet.data.sheets.find(s => s.properties.sheetId === sheetId);
-            if (sheet && sheet.conditionalFormats) {
-                existingRules = sheet.conditionalFormats;
+        const monthNames = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+
+        // First, delete all existing rules in one batch
+        const deleteRequests = [];
+        for (const sheet of spreadsheet.data.sheets) {
+            const sheetTitle = sheet.properties.title;
+            if (monthNames.some(month => sheetTitle.startsWith(month)) && sheet.conditionalFormats) {
+                deleteRequests.push({
+                    deleteConditionalFormatRule: {
+                        sheetId: sheet.properties.sheetId,
+                        index: 0
+                    }
+                });
             }
-        } catch (fetchError) {
-            console.error('Error fetching existing conditional formats:', fetchError);
         }
 
-        // First, delete all existing rules in a separate batch update
-        if (existingRules.length > 0) {
-            const deleteRequests = existingRules.map((rule, index) => ({
-                deleteConditionalFormatRule: {
-                    sheetId: sheetId,
-                    index: 0  // Always delete from index 0
-                }
-            }));
-
+        if (deleteRequests.length > 0) {
             await sheets.spreadsheets.batchUpdate({
                 spreadsheetId: SPREADSHEET_ID,
                 resource: { requests: deleteRequests }
             });
         }
 
-        // Prepare add requests
-        const addRequests = [
-            // Start Time color scale (green to red) - earlier is better (green)
-            {
-                addConditionalFormatRule: {
-                    rule: {
-                        ranges: [{
-                            sheetId: sheetId,
-                            startRowIndex: 1,  // Skip header row
-                            startColumnIndex: startTimeIndex,
-                            endColumnIndex: startTimeIndex + 1
-                        }],
-                        gradientRule: {
-                            minpoint: {
-                                color: {
-                                    red: 0.15,
-                                    green: 0.73,
-                                    blue: 0.37  // Green
-                                },
-                                type: "NUMBER",
-                                value: "0"  // Midnight (earliest)
-                            },
-                            midpoint: {
-                                color: {
-                                    red: 0.87,
-                                    green: 0.84,
-                                    blue: 0.33  // Yellow
-                                },
-                                type: "NUMBER",
-                                value: "0.25"  // 6:00 AM
-                            },
-                            maxpoint: {
-                                color: {
-                                    red: 0.87,
-                                    green: 0.36,
-                                    blue: 0.34  // Red
-                                },
-                                type: "NUMBER",
-                                value: "0.33"  // 8:00 AM (latest)
-                            }
-                        }
-                    },
-                    index: 0
-                }
-            },
+        // Then add all new rules in another batch
+        const addRequests = [];
+        for (const sheet of spreadsheet.data.sheets) {
+            const sheetId = sheet.properties.sheetId;
+            const sheetTitle = sheet.properties.title;
             
-            // End Time color scale (red to green) - later is better (green)
-            {
-                addConditionalFormatRule: {
-                    rule: {
-                        ranges: [{
-                            sheetId: sheetId,
-                            startRowIndex: 1,  // Skip header row
-                            startColumnIndex: endTimeRangeStart,
-                            endColumnIndex: endTimeRangeEnd
-                        }],
-                        gradientRule: {
-                            minpoint: {
-                                color: {
-                                    red: 0.87,
-                                    green: 0.36,
-                                    blue: 0.34  // Red
-                                },
-                                type: "NUMBER",
-                                value: "0.75"  // 6:00 PM (earliest)
+            if (monthNames.some(month => sheetTitle.startsWith(month))) {
+                // Add time-based rules
+                addRequests.push(
+                    {
+                        addConditionalFormatRule: {
+                            rule: {
+                                ranges: [{
+                                    sheetId: sheetId,
+                                    startRowIndex: 1,
+                                    startColumnIndex: 1,
+                                    endColumnIndex: 2
+                                }],
+                                gradientRule: {
+                                    minpoint: { color: { red: 0.15, green: 0.73, blue: 0.37 }, type: "NUMBER", value: "0" },
+                                    midpoint: { color: { red: 0.87, green: 0.84, blue: 0.33 }, type: "NUMBER", value: "0.25" },
+                                    maxpoint: { color: { red: 0.87, green: 0.36, blue: 0.34 }, type: "NUMBER", value: "0.33" }
+                                }
                             },
-                            midpoint: {
-                                color: {
-                                    red: 0.87,
-                                    green: 0.84,
-                                    blue: 0.33  // Yellow
-                                },
-                                type: "NUMBER",
-                                value: "0.95"  // 10:48 PM
-                            },
-                            maxpoint: {
-                                color: {
-                                    red: 0.15,
-                                    green: 0.73,
-                                    blue: 0.37  // Green
-                                },
-                                type: "NUMBER",
-                                value: "1"  // Midnight (latest)
-                            }
+                            index: 0
                         }
                     },
-                    index: 1
-                }
+                    {
+                        addConditionalFormatRule: {
+                            rule: {
+                                ranges: [{
+                                    sheetId: sheetId,
+                                    startRowIndex: 1,
+                                    startColumnIndex: 2,
+                                    endColumnIndex: 25
+                                }],
+                                gradientRule: {
+                                    minpoint: { color: { red: 0.87, green: 0.36, blue: 0.34 }, type: "NUMBER", value: "0.75" },
+                                    midpoint: { color: { red: 0.87, green: 0.84, blue: 0.33 }, type: "NUMBER", value: "0.95" },
+                                    maxpoint: { color: { red: 0.15, green: 0.73, blue: 0.37 }, type: "NUMBER", value: "1" }
+                                }
+                            },
+                            index: 1
+                        }
+                    }
+                );
+                
+                // Add user-specific rules
+                const userRules = await generateUserFormatRules(sheetId);
+                addRequests.push(...userRules);
             }
-        ];
+        }
 
-        // Add user-specific conditional formatting rules
-        const userRules = await generateUserFormatRules(sheetId);
-        addRequests.push(...userRules);
+        if (addRequests.length > 0) {
+            await sheets.spreadsheets.batchUpdate({
+                spreadsheetId: SPREADSHEET_ID,
+                resource: { requests: addRequests }
+            });
+        }
         
-        // Perform the add rules batch update
-        await sheets.spreadsheets.batchUpdate({
-            spreadsheetId: SPREADSHEET_ID,
-            resource: { requests: addRequests }
-        });
-        
-        console.log('Conditional formatting applied successfully');
+        console.log('Conditional formatting applied successfully to all sheets');
     } catch (error) {
         console.error('Error applying conditional formatting:', error);
         throw error;
@@ -499,7 +453,6 @@ async function formatMessageHistory() {
             console.log('Usernames without background color rules:', missingUsernameRules);
             
             // Use the addNewUserToSheet function from userFormatting
-            const { addNewUserToSheet } = require('../utils/userFormatting');
             
             for (const username of missingUsernameRules) {
                 await addNewUserToSheet(username);
@@ -508,8 +461,7 @@ async function formatMessageHistory() {
             // Immediately add conditional formatting rules for new users
             
         }
-        await applyConditionalFormatting(sheetId, { headers });
-
+        await applyConditionalFormatting({ headers });
         // Auto-resize columns
         await sheets.spreadsheets.batchUpdate({
             spreadsheetId: SPREADSHEET_ID,

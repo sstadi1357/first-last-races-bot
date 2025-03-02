@@ -88,6 +88,39 @@ async function fetchUsersFromSheet() {
         return null;
     }
 }
+async function addNewUserToSheet(username) {
+    try {
+        // Fetch existing users and their colors
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: 'Users!A:B'
+        });
+
+        const rows = response.data.values || [];
+        const existingColors = rows.slice(1).map(row => row[1].startsWith('#') ? row[1] : `#${row[1]}`);
+        
+        // Calculate a new distinct hex color
+        const newHexColor = calculateDistinctHexColor(existingColors);
+        
+        // Append the new user to the sheet
+        await sheets.spreadsheets.values.append({
+            spreadsheetId,
+            range: 'Users!A:B',
+            valueInputOption: 'USER_ENTERED',
+            insertDataOption: 'INSERT_ROWS',
+            resource: {
+                values: [[username, newHexColor]]
+            }
+        });
+        
+        console.log(`Added new user ${username} with color ${newHexColor}`);
+        
+        return { username, hexColor: newHexColor };
+    } catch (error) {
+        console.error('Error adding new user to sheet:', error);
+        return null;
+    }
+}
 async function generateUserFormatRules(sheetId) {
     console.log(`Generating user format rules for sheet ID: ${sheetId}`);
     try {
@@ -173,5 +206,6 @@ module.exports = {
     generateUserFormatRules,
     fetchUsersFromSheet,
     hexToRgb,
-    shouldUseWhiteText
+    shouldUseWhiteText,
+    addNewUserToSheet
 };
