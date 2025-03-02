@@ -1,5 +1,7 @@
 //You need to change the first 6 variables to your own links and server settings and users and colors. 
 
+const { hex } = require("color-convert");
+
 const serverId = ('1300198974988357732')
 
 const firebaseId = ("https://first-last-races-default-rtdb.firebaseio.com")
@@ -9,6 +11,8 @@ const spreadsheetId = ('1CH85wIWmj0H6zgnjkNtHm_rYIlW_8AFM4z16G44W8ow')
 const mainChannelId = ('1300198975437275147')
 
 const flairAnnouncementChannelId = '1336557845558333470'; 
+// The hexChannelId is the channel where people can post a hex color for the sheet. You don't need it if you're not using a google sheet
+const hexChannelId = '1345867387575996436'
 // the users is for conditional formatting for the sheet, you don't need it if you're not using a google sheet
 /*
 If you are using a Google Sheet, and you want to set the users and their colors there, create a sheet called "Users" and put the usernames
@@ -90,5 +94,6 @@ module.exports = {
     ROLES,
     scoring,
     cronSchedule,
-    users
+    users,
+    hexChannelId
 }

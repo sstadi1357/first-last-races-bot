@@ -1,5 +1,6 @@
 const { FieldValue } = require('firebase-admin/firestore');
 const db = require('../firebase'); // Import Firestore instance
+const { Events } = require('discord.js');
 const { mainChannelId } = require('../config/mainConfig.js');
 function getPacificDate() {
   return new Date().toLocaleString("en-US", {
@@ -11,7 +12,7 @@ function getPacificDate() {
 }
 
 module.exports = {
-  name: 'messageCreate',
+  name: Events.MessageCreate,
   async execute(message) {
     // Ignore bot messages, DMs, and messages not in the races channel
     if (message.author.bot || !message.guild || message.channel.id !== mainChannelId) return;
