@@ -68,7 +68,7 @@ Ensure you have the following:
 1. Enable the Google Sheets API in Google Cloud.
 2. Create a new sheet and save the Sheet ID.
 3. Add the Sheet ID to `src/config/mainConfig.js`.
-4. Adjust the users and and their color values in `src/config/mainConfig.js`.
+4. Create a "Users" sheet in the google sheet, OR adjust the users and and their color values in `src/config/mainConfig.js`. It's better to do the first option because you can add functionality for users to choose their own colors with a channel named "#hex". Read the comments on src/mainConfig.js for more information.
 
 ## How It Works
 
