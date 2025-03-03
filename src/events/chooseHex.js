@@ -32,17 +32,100 @@ function hexToRgb(hex) {
   return [r, g, b];
 }
 
-// Calculate color distance (Euclidean distance in RGB space)
+// Calculate color distance using perceptual color difference (deltaE)
 function colorDistance(hex1, hex2) {
   const rgb1 = hexToRgb(hex1);
   const rgb2 = hexToRgb(hex2);
   
-  // Calculate Euclidean distance
-  const rDiff = rgb1[0] - rgb2[0];
-  const gDiff = rgb1[1] - rgb2[1];
-  const bDiff = rgb1[2] - rgb2[2];
+  try {
+    // Convert RGB to Lab color space for more perceptually accurate comparison
+    const lab1 = rgbToLab(rgb1);
+    const lab2 = rgbToLab(rgb2);
+    
+    // Calculate deltaE (CIE76 formula)
+    const lDiff = lab1.l - lab2.l;
+    const aDiff = lab1.a - lab2.a;
+    const bDiff = lab1.b - lab2.b;
+    
+    const deltaE = Math.sqrt(lDiff * lDiff + aDiff * aDiff + bDiff * bDiff);
+    
+    // Also check luminance difference for dark colors
+    const lum1 = calculateLuminance(rgb1[0]/255, rgb1[1]/255, rgb1[2]/255);
+    const lum2 = calculateLuminance(rgb2[0]/255, rgb2[1]/255, rgb2[2]/255);
+    
+    // Special adjustment for dark colors
+    if (lum1 < 0.1 && lum2 < 0.1) {
+      // If both colors are dark, increase their similarity
+      return deltaE * 0.7;
+    }
+    
+    // Special adjustment for light colors
+    if (lum1 > 0.9 && lum2 > 0.9) {
+      // If both colors are light, increase their similarity
+      return deltaE * 0.7;
+    }
+    
+    return deltaE;
+  } catch (error) {
+    console.error('Error calculating deltaE, falling back to RGB distance:', error);
+    
+    // Fallback to RGB distance if Lab conversion fails
+    const rDiff = rgb1[0] - rgb2[0];
+    const gDiff = rgb1[1] - rgb2[1];
+    const bDiff = rgb1[2] - rgb2[2];
+    
+    return Math.sqrt(rDiff * rDiff + gDiff * gDiff + bDiff * bDiff) / 4;
+  }
+}
+
+// Calculate relative luminance (used in WCAG contrast calculations)
+function calculateLuminance(r, g, b) {
+  // Convert RGB to linear RGB
+  const R = r <= 0.04045 ? r/12.92 : Math.pow((r+0.055)/1.055, 2.4);
+  const G = g <= 0.04045 ? g/12.92 : Math.pow((g+0.055)/1.055, 2.4);
+  const B = b <= 0.04045 ? b/12.92 : Math.pow((b+0.055)/1.055, 2.4);
   
-  return Math.sqrt(rDiff * rDiff + gDiff * gDiff + bDiff * bDiff);
+  // Calculate luminance
+  return 0.2126 * R + 0.7152 * G + 0.0722 * B;
+}
+
+// Convert RGB to Lab color space
+function rgbToLab(rgb) {
+  // First convert RGB to XYZ
+  let r = rgb[0] / 255;
+  let g = rgb[1] / 255;
+  let blue = rgb[2] / 255; // Renamed from 'b' to 'blue' to avoid variable collision
+  
+  r = r > 0.04045 ? Math.pow((r + 0.055) / 1.055, 2.4) : r / 12.92;
+  g = g > 0.04045 ? Math.pow((g + 0.055) / 1.055, 2.4) : g / 12.92;
+  blue = blue > 0.04045 ? Math.pow((blue + 0.055) / 1.055, 2.4) : blue / 12.92;
+  
+  r *= 100;
+  g *= 100;
+  blue *= 100;
+  
+  const x = r * 0.4124 + g * 0.3576 + blue * 0.1805;
+  const y = r * 0.2126 + g * 0.7152 + blue * 0.0722;
+  const z = r * 0.0193 + g * 0.1192 + blue * 0.9505;
+  
+  // Then convert XYZ to Lab
+  const xn = 95.047;
+  const yn = 100.0;
+  const zn = 108.883;
+  
+  const x1 = x / xn;
+  const y1 = y / yn;
+  const z1 = z / zn;
+  
+  const fx = x1 > 0.008856 ? Math.pow(x1, 1/3) : (7.787 * x1) + (16/116);
+  const fy = y1 > 0.008856 ? Math.pow(y1, 1/3) : (7.787 * y1) + (16/116);
+  const fz = z1 > 0.008856 ? Math.pow(z1, 1/3) : (7.787 * z1) + (16/116);
+  
+  const l = (116 * fy) - 16;
+  const a = 500 * (fx - fy);
+  const bValue = 200 * (fy - fz); // Renamed from 'b' to 'bValue' to avoid variable collision
+  
+  return { l, a, b: bValue };
 }
 
 // Check if color is too similar to existing colors
@@ -59,26 +142,120 @@ async function isTooSimilar(newHex, username) {
     const userColors = rows.slice(1)
       .filter(row => row.length >= 2 && row[0] !== username && row[1]);
     
-    // With strictnessFactor = 5, threshold will be 145
-    // This means colors need to be very close to be rejected
-    const threshold = 150 - strictnessFactor;
+    // Calculate perceptual deltaE threshold based on strictnessFactor
+    // strictnessFactor ranges from 1 (least strict) to 10 (most strict)
+    // For deltaE, smaller values mean colors are more similar
+    // A deltaE of ~2.3 is just noticeable to the average person
+    // A deltaE of ~5.0 is clearly noticeable
+    const baseThreshold = 25 - (strictnessFactor * 2);
+    console.log(`Base deltaE threshold from strictnessFactor (${strictnessFactor}): ${baseThreshold}`);
     
-    console.log(`Checking color similarity with threshold: ${threshold} (very lenient)`);
+    // Get RGB and luminance of the new color
+    const newRgb = hexToRgb(newHex);
+    const newLuminance = calculateLuminance(newRgb[0]/255, newRgb[1]/255, newRgb[2]/255);
+    console.log(`New color ${newHex} has luminance: ${newLuminance.toFixed(4)}`);
     
-    for (const userColor of userColors) {
-      const existingColor = userColor[1];
-      const distance = colorDistance(newHex, existingColor);
+    // Check for very dark colors (nearly black)
+    if (newLuminance < 0.05) {
+      console.log(`Color ${newHex} is very dark (luminance < 0.05)`);
       
-      console.log(`Distance between ${newHex} and ${existingColor} (${userColor[0]}): ${distance}`);
+      // Find existing dark colors
+      const darkColors = userColors.filter(user => {
+        if (!user[1]) return false;
+        
+        const colorHex = user[1].trim();
+        if (!colorHex) return false;
+        
+        try {
+          const rgb = hexToRgb(colorHex);
+          if (!rgb) return false;
+          
+          const lum = calculateLuminance(rgb[0]/255, rgb[1]/255, rgb[2]/255);
+          return lum < 0.05; // Consider any color with luminance < 0.05 as "dark"
+        } catch (err) {
+          console.error(`Error processing color ${colorHex}:`, err);
+          return false;
+        }
+      });
       
-      // Only reject if colors are extremely similar
-      if (distance < threshold && distance < 30) {
-        console.log(`Color ${newHex} is extremely similar to existing color ${existingColor} (${userColor[0]}) with distance ${distance}`);
+      if (darkColors.length > 0) {
+        console.log(`Found ${darkColors.length} other dark colors already in use`);
         return {
           tooSimilar: true,
-          similarTo: userColor[0],
-          distance: distance
+          similarTo: darkColors[0][0],
+          distance: 3,
+          reason: "too-dark",
+          threshold: 5
         };
+      }
+    }
+    
+    // Check for very light colors (nearly white)
+    if (newLuminance > 0.95) {
+      console.log(`Color ${newHex} is very light (luminance > 0.95)`);
+      
+      // Find existing light colors
+      const lightColors = userColors.filter(user => {
+        if (!user[1]) return false;
+        
+        const colorHex = user[1].trim();
+        if (!colorHex) return false;
+        
+        try {
+          const rgb = hexToRgb(colorHex);
+          if (!rgb) return false;
+          
+          const lum = calculateLuminance(rgb[0]/255, rgb[1]/255, rgb[2]/255);
+          return lum > 0.90; // Consider any color with luminance > 0.90 as "light"
+        } catch (err) {
+          console.error(`Error processing color ${colorHex}:`, err);
+          return false;
+        }
+      });
+      
+      if (lightColors.length > 0) {
+        console.log(`Found ${lightColors.length} other light colors already in use`);
+        return {
+          tooSimilar: true,
+          similarTo: lightColors[0][0],
+          distance: 3,
+          reason: "too-light",
+          threshold: 5
+        };
+      }
+    }
+    
+    // Adjust threshold based on luminance
+    let adjustedThreshold = baseThreshold;
+    
+    // Make threshold stricter (smaller) for very dark or very light colors
+    if (newLuminance < 0.1 || newLuminance > 0.9) {
+      adjustedThreshold = baseThreshold * 0.7;
+      console.log(`Adjusted threshold for dark/light color: ${adjustedThreshold}`);
+    }
+    
+    // Compare with all existing colors
+    for (const userColor of userColors) {
+      if (!userColor[1]) continue;
+      
+      const existingColor = userColor[1].trim();
+      if (!existingColor) continue;
+      
+      try {
+        const distance = colorDistance(newHex, existingColor);
+        console.log(`DeltaE between ${newHex} and ${existingColor} (${userColor[0]}): ${distance.toFixed(2)}`);
+        
+        if (distance < adjustedThreshold) {
+          console.log(`Color ${newHex} is too similar to existing color ${existingColor} (${userColor[0]}) with deltaE ${distance.toFixed(2)}`);
+          return {
+            tooSimilar: true,
+            similarTo: userColor[0],
+            distance: distance,
+            threshold: adjustedThreshold
+          };
+        }
+      } catch (err) {
+        console.error(`Error comparing colors ${newHex} and ${existingColor}:`, err);
       }
     }
     
@@ -203,10 +380,18 @@ module.exports = {
       } else if (result.reason === 'similar-color') {
         // Color is too similar to existing color
         await message.delete();
-        await message.author.send(
-          `Your color ${hex} is too similar to ${result.details.similarTo}'s color. ` +
-          `Please choose a more distinct color. (Similarity: ${Math.round(result.details.distance)} out of ${150 - strictnessFactor} threshold)`
-        );
+        
+        let reasonMsg = '';
+        if (result.details.reason === "too-dark") {
+          reasonMsg = `Your color ${hex} is too dark and similar to another dark color already in use by ${result.details.similarTo}. Please choose a more distinct or brighter color.`;
+        } else if (result.details.reason === "too-light") {
+          reasonMsg = `Your color ${hex} is too light and similar to another light color already in use by ${result.details.similarTo}. Please choose a more distinct or darker color.`;
+        } else {
+          const threshold = result.details.threshold || 50;
+          reasonMsg = `Your color ${hex} is too similar to ${result.details.similarTo}'s color. Please choose a more distinct color. (Similarity: ${Math.round(result.details.distance)} out of ${Math.round(threshold)} threshold)`;
+        }
+        
+        await message.author.send(reasonMsg);
       } else {
         // There was a technical error
         await message.delete();

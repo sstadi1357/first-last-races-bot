@@ -11,7 +11,8 @@ const spreadsheetId = ('1CH85wIWmj0H6zgnjkNtHm_rYIlW_8AFM4z16G44W8ow')
 const mainChannelId = ('1300198975437275147')
 
 const flairAnnouncementChannelId = '1336557845558333470'; 
-// The hexChannelId is the channel where people can post a hex color for the sheet. You don't need it if you're not using a google sheet
+/* The hexChannelId is the channel where people can post a hex color for the sheet. 
+You don't need it if you're not using a google sheet. But you do need a sheet that's called "Users" */
 const hexChannelId = '1345867387575996436'
 // the users is for conditional formatting for the sheet, you don't need it if you're not using a google sheet
 /*
