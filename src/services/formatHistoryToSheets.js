@@ -6,6 +6,44 @@ const { shouldBeGray } = require('../config/holidayDates');
 const { serverId, spreadsheetId } = require('../config/mainConfig');
 const { generateUserFormatRules, addNewUserToSheet, fetchUsersFromSheet } = require('../utils/userFormatting');
 
+// Add after the imports at the top
+function hexToRgb(hex) {
+    hex = hex.replace(/^#/, '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return [r, g, b];
+}
+
+async function applyHeaderFormatting(sheetId) {
+    try {
+        await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: SPREADSHEET_ID,
+            resource: {
+                requests: [{
+                    repeatCell: {
+                        range: {
+                            sheetId: sheetId,
+                            startRowIndex: 0,
+                            endRowIndex: 1
+                        },
+                        cell: {
+                            userEnteredFormat: {
+                                backgroundColor: { red: 1, green: 1, blue: 1 },
+                                textFormat: { bold: true },
+                                horizontalAlignment: 'CENTER'
+                            }
+                        },
+                        fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)'
+                    }
+                }]
+            }
+        });
+    } catch (error) {
+        console.error('Error applying header formatting:', error);
+        throw error;
+    }
+}
 // Configure the spreadsheet details
 const SPREADSHEET_ID = spreadsheetId;
 const SERVER_ID = serverId;

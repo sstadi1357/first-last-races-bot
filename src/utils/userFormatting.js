@@ -15,7 +15,46 @@ function hexToRgb(hex) {
   console.log(`Hex ${hex} converted to RGB: [${r}, ${g}, ${b}]`);
   return [r, g, b];
 }
+function calculateDistinctHexColor(existingColors) {
+    const getRandomHex = () => {
+        const hex = Math.floor(Math.random() * 16777215).toString(16);
+        return '#' + '0'.repeat(6 - hex.length) + hex;
+    };
 
+    const colorDistance = (color1, color2) => {
+        const rgb1 = hexToRgb(color1);
+        const rgb2 = hexToRgb(color2);
+        return Math.sqrt(
+            Math.pow(rgb2[0] - rgb1[0], 2) +
+            Math.pow(rgb2[1] - rgb1[1], 2) +
+            Math.pow(rgb2[2] - rgb1[2], 2)
+        );
+    };
+
+    let attempts = 0;
+    let maxAttempts = 1000;
+    let bestColor = getRandomHex();
+    let maxMinDistance = 0;
+
+    while (attempts < maxAttempts) {
+        const candidateColor = getRandomHex();
+        let minDistance = Number.MAX_VALUE;
+
+        for (const existingColor of existingColors) {
+            const distance = colorDistance(candidateColor, existingColor);
+            minDistance = Math.min(minDistance, distance);
+        }
+
+        if (minDistance > maxMinDistance) {
+            maxMinDistance = minDistance;
+            bestColor = candidateColor;
+        }
+
+        attempts++;
+    }
+
+    return bestColor;
+}
 function shouldUseWhiteText(rgb) {
     // Calculate relative luminance
     const r = rgb[0] / 255;
