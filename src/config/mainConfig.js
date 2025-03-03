@@ -12,12 +12,12 @@ const mainChannelId = ('1300198975437275147')
 
 const flairAnnouncementChannelId = '1336557845558333470'; 
 /* The hexChannelId is the channel where people can post a hex color for the sheet. 
-You don't need it if you're not using a google sheet. But you do need a sheet that's called "Users" */
+You don't need it if you're not using a google sheet. But you do need a sheet that's called "Users". 
+This won't change the users array below. If people post a hex code in the hex channel, it will go on the "Users" sheet
+and update their color for the entire sheet.*/
 const hexChannelId = '1345867387575996436'
 // the users is for conditional formatting for the sheet, you don't need it if you're not using a google sheet
-/*
-If you are using a Google Sheet, and you want to set the users and their colors there, create a sheet called "Users" and put the usernames
-in column A and the hex colors in column B (Skip row 1 for headers).
+/* The values below are just in case you do not want to create a "Users" sheet in the google sheet.
 You can always change these HEX codes and users if you want. However, if a new user comes, it will only log and create a color for it if it as a sheet.*/
 const users = [
   { username: "sstadi1357", hexColor: "#980000" },
