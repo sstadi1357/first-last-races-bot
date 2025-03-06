@@ -77,7 +77,7 @@ const scoring = {
       14: 3,
       15: 3,
       default: 2  // 16th and beyond
-    }
+    } 
   }
   //Time to schedule the points scheduler.
 const cronSchedule = {
