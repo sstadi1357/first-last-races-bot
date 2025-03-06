@@ -42,15 +42,15 @@ Ensure you have the following:
    DISCORD_TOKEN=your_discord_bot_token_here
    CLIENT_ID=your_discord_bot_client_id_here
    ```
-2. Configure settings in ``src/config/mainConfig.json``:
+2. Configure settings in ``src/config/mainConfig.js``:
    - Server ID
    - Database and Google Sheets integration
    - Channels and roles
    - Points system
    - Scheduler options
 3. Set holiday dates in `src/config/holidayDates.js` (grayed out in the sheet).
-4. Customize presence values in `src/functions/presenceModule.js`.
-
+4. Modify bot presence settings in src/functions/presenceModule.js (e.g., custom status messages).
+   
 ### 2. **Firebase Setup**
 
 1. Create a Firebase project and generate a service account key.
@@ -68,7 +68,7 @@ Ensure you have the following:
 1. Enable the Google Sheets API in Google Cloud.
 2. Create a new sheet and save the Sheet ID.
 3. Add the Sheet ID to `src/config/mainConfig.js`.
-4. Create a "Users" sheet in the google sheet, OR adjust the users and and their color values in `src/config/mainConfig.js`. It's better to do the first option because you can add functionality for users to choose their own colors with a channel named "#hex". Read the comments on src/mainConfig.js for more information.
+4. Create a "Users" sheet in the google sheet, OR adjust the users and and their color values in `src/config/mainConfig.js`. The first option is recommended as it allows users to select their own colors via a #hex channel. Read the comments on src/mainConfig.js for more information.
 
 ## How It Works
 
