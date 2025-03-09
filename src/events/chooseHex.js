@@ -4,7 +4,7 @@ const { hexChannelId } = require('../config/mainConfig.js');
 const { serverId, spreadsheetId } = require('../config/mainConfig');
 const { Events } = require('discord.js');
 const sheets = require('../sheets');
-const { formatUserCells } = require('../functions/userSheetFormatting'); // Import the new cell formatting module
+const { formatAllUserCells } = require('../functions/userSheetFormatting'); // Import the new cell formatting module
 
 // Set strictnessFactor to a very low value for much less strict checking
 // Lower value = less strict (colors can be more similar)
@@ -314,7 +314,7 @@ async function updateUserHexInSheet(username, hexColor) {
       });
       
       // Format the cells after updating the value
-      await formatUserCells(rowIndex, hexColor);
+      await formatAllUserCells();
     } else {
       // Add new user to the end of the sheet
       console.log(`User ${username} not found, adding as new entry to Users sheet`);
@@ -346,7 +346,7 @@ async function updateUserHexInSheet(username, hexColor) {
       
       if (newRowIndex > 0) {
         // Format the cells for the new user
-        await formatUserCells(newRowIndex, hexColor);
+        await formatAllUserCells();
       }
     }
     

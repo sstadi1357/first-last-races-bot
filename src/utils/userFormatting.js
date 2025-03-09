@@ -1,7 +1,7 @@
 // utils/userFormatting.js
 const sheets = require('../sheets.js');
 const { spreadsheetId, users } = require('../config/mainConfig');
-
+const { formatAllUserCells } = require('../functions/userSheetFormatting.js');
 function hexToRgb(hex) {
   console.log(`Converting hex color ${hex} to RGB`);
   // Remove # if present
@@ -153,7 +153,7 @@ async function addNewUserToSheet(username) {
         });
         
         console.log(`Added new user ${username} with color ${newHexColor}`);
-        
+        await formatAllUserCells();
         return { username, hexColor: newHexColor };
     } catch (error) {
         console.error('Error adding new user to sheet:', error);

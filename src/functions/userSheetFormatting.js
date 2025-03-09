@@ -57,31 +57,12 @@ function getContrastColor(r, g, b) {
  * @param {string} hexColor - Hex color code
  * @return {Promise<boolean>} Success status
  */
-async function formatUserCells(row, hexColor) {
-  console.log(`Formatting cells for row ${row} with hex color ${hexColor}`);
+async function formatAllUserCells() {
+  console.log('Formatting all user cells based on hex colors in column B');
   
   try {
-    // Ensure hexColor has a # prefix
-    if (!hexColor.startsWith('#')) {
-      hexColor = '#' + hexColor;
-    }
-    
-    // Convert hex to RGB
-    const rgb = hexToRgb(hexColor.replace('#', ''));
-    
-    if (!rgb) {
-      console.error(`Failed to convert hex color ${hexColor}`);
-      return false;
-    }
-    
-    // Determine text color based on background brightness
-    const textColor = getContrastColor(rgb.r, rgb.g, rgb.b);
-    
-    // First, we need to get the sheet ID for the 'Users' sheet
-    const spreadsheetInfo = await sheets.spreadsheets.get({
-      spreadsheetId
-    });
-    
+    // First, get the sheet ID and data for the 'Users' sheet
+    const spreadsheetInfo = spreadsheetId
     const usersSheet = spreadsheetInfo.data.sheets.find(
       sheet => sheet.properties.title === 'Users'
     );
@@ -92,75 +73,69 @@ async function formatUserCells(row, hexColor) {
     }
     
     const sheetId = usersSheet.properties.sheetId;
-    console.log(`Found 'Users' sheet with ID: ${sheetId}`);
     
-    // Format cells A and B in the specified row
-    const requests = [
-      {
-        // Format cell A (username)
-        repeatCell: {
-          range: {
-            sheetId: sheetId,
-            startRowIndex: row - 1,
-            endRowIndex: row,
-            startColumnIndex: 0,
-            endColumnIndex: 1
-          },
-          cell: {
-            userEnteredFormat: {
-              backgroundColor: {
-                red: rgb.r / 255,
-                green: rgb.g / 255,
-                blue: rgb.b / 255
-              },
-              textFormat: {
-                foregroundColor: textColor
-              }
-            }
-          },
-          fields: 'userEnteredFormat(backgroundColor,textFormat.foregroundColor)'
-        }
-      },
-      {
-        // Format cell B (hex color)
-        repeatCell: {
-          range: {
-            sheetId: sheetId,
-            startRowIndex: row - 1,
-            endRowIndex: row,
-            startColumnIndex: 1,
-            endColumnIndex: 2
-          },
-          cell: {
-            userEnteredFormat: {
-              backgroundColor: {
-                red: rgb.r / 255,
-                green: rgb.g / 255,
-                blue: rgb.b / 255
-              },
-              textFormat: {
-                foregroundColor: textColor
-              }
-            }
-          },
-          fields: 'userEnteredFormat(backgroundColor,textFormat.foregroundColor)'
-        }
-      }
-    ];
-    
-    await sheets.spreadsheets.batchUpdate({
+    // Get all values from the sheet
+    const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      resource: {
-        requests
+      range: 'Users!A:B'
+    });
+    
+    const rows = response.data.values || [];
+    const requests = [];
+    
+    // Process each row that has a hex color in column B
+    rows.forEach((row, index) => {
+      if (row && row[1]) { // If row exists and there's a hex color in column B
+        let hexColor = row[1];
+        if (!hexColor.startsWith('#')) {
+          hexColor = '#' + hexColor;
+        }
+        
+        const rgb = hexToRgb(hexColor);
+        if (!rgb) return;
+        
+        const textColor = getContrastColor(rgb.r, rgb.g, rgb.b);
+        
+        // Format cells A and B for this row
+        requests.push({
+          repeatCell: {
+            range: {
+              sheetId: sheetId,
+              startRowIndex: index,
+              endRowIndex: index + 1,
+              startColumnIndex: 0,
+              endColumnIndex: 2
+            },
+            cell: {
+              userEnteredFormat: {
+                backgroundColor: {
+                  red: rgb.r / 255,
+                  green: rgb.g / 255,
+                  blue: rgb.b / 255
+                },
+                textFormat: {
+                  foregroundColor: textColor
+                }
+              }
+            },
+            fields: 'userEnteredFormat(backgroundColor,textFormat.foregroundColor)'
+          }
+        });
       }
     });
     
-    console.log(`Successfully formatted cells for row ${row}`);
-    return true;
+    if (requests.length > 0) {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId,
+        resource: { requests }
+      });
+      console.log(`Successfully formatted ${requests.length} rows`);
+      return true;
+    }
   } catch (error) {
     console.error(`Error formatting user cells: ${error}`);
     return false;
   }
 }
 
-module.exports = { formatUserCells, hexToRgb, getContrastColor };
+module.exports = { formatAllUserCells, hexToRgb, getContrastColor };
