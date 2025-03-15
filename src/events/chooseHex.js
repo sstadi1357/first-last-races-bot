@@ -346,7 +346,7 @@ async function updateUserHexInSheet(username, hexColor) {
       
       if (newRowIndex > 0) {
         // Format the cells for the new user
-        await formatAllUserCells();
+        await formatAllUserCells()
       }
     }
     
