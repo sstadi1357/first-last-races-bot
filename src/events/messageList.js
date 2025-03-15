@@ -8,7 +8,7 @@ function getPacificDate() {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit'
-  }).split(',')[0].split('/').join('-');
+  }).split(',')[0].split('/').join('-')
 }
 
 module.exports = {
