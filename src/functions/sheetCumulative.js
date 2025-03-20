@@ -134,7 +134,7 @@ async function updateCumulativeSheet(month, year, startRow) {
             if (sortedMessages.length > 0) {
                 const firstDate = parseTimestamp(sortedMessages[0].timestamp);
                 if (firstDate) {
-                    startTime = format(firstDate, 'HH:mm:ss');
+                    startTime = format(firstDate, 'h:mm:ss a');
                 }
             }
             // Fill positions array with usernames
@@ -151,7 +151,7 @@ async function updateCumulativeSheet(month, year, startRow) {
                     last = dayData.lastMessages.last.username;
                     const lastDate = parseTimestamp(dayData.lastMessages.last.timestamp);
                     if (lastDate) {
-                        endTime = format(lastDate, 'HH:mm:ss');
+                        endTime = format(lastDate, 'h:mm:ss a');
                     }
                 }
                 if (dayData.lastMessages.secondLast) {
@@ -160,7 +160,7 @@ async function updateCumulativeSheet(month, year, startRow) {
             }
             // Format date as MM/DD/YYYY for sheet
             const [monthStr, day, yearStr] = dateStr.split('-');
-            const formattedDate = `${monthStr}/${day}/${yearStr}`;
+            const formattedDate = `${month}/${day}`;
             
             // Create row data
             const newRow = [
