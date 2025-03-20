@@ -5,7 +5,8 @@ const { hex } = require("color-convert");
 const serverId = ('1300198974988357732')
 
 const firebaseId = ("https://first-last-races-default-rtdb.firebaseio.com")
-
+//Delete the line below if you're not using a sheet or the implementation might break. 
+// Change the spreadsheetId to your own if you do want to use a google sheet.
 const spreadsheetId = ('1CH85wIWmj0H6zgnjkNtHm_rYIlW_8AFM4z16G44W8ow')
 
 const mainChannelId = ('1300198975437275147')
