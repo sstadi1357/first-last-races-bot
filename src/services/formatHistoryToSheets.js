@@ -5,7 +5,7 @@ const { format, parseISO, isValid } = require('date-fns');
 const { shouldBeGray } = require('../config/holidayDates');
 const { serverId, spreadsheetId } = require('../config/mainConfig');
 const { generateUserFormatRules, addNewUserToSheet, fetchUsersFromSheet } = require('../utils/userFormatting');
-
+const { updateCumulativeSheet } = require('../functions/sheetCumulative');
 // Add after the imports at the top
 function hexToRgb(hex) {
     hex = hex.replace(/^#/, '');
@@ -139,13 +139,36 @@ async function getOrCreateSheet(sheetName) {
 }
 
 async function getMaxPositionsAndCreateHeaders() {
-    console.log('Analyzing historical data to determine maximum positions...');
+    console.log('Analyzing current month data to determine maximum positions...');
+    
+    // Get current month and year
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1; // JavaScript months are 0-indexed
+    const currentYear = now.getFullYear();
+    
+    // Format month to 2 digits for filtering (e.g., "02-" for February)
+    const monthPrefix = String(currentMonth).padStart(2, '0') + "-";
+    
+    console.log(`Looking for documents with prefix: ${monthPrefix} for year ${currentYear}`);
     
     let maxPositions = 0;
     const daysRef = db.collection('servers').doc(SERVER_ID).collection('days');
     const daysSnapshot = await daysRef.get();
     
     for (const dayDoc of daysSnapshot.docs) {
+        const dateStr = dayDoc.id; // Format: MM-DD-YYYY
+        
+        // Skip if not current month
+        if (!dateStr.startsWith(monthPrefix)) {
+            continue;
+        }
+        
+        // Extract year from document ID and compare with current year
+        const docYear = dateStr.split('-')[2];
+        if (docYear !== String(currentYear)) {
+            continue;
+        }
+        
         const dayData = dayDoc.data();
         if (dayData.messages && dayData.messages.length > maxPositions) {
             maxPositions = dayData.messages.length;
@@ -185,13 +208,17 @@ async function applyConditionalFormatting({ headers }) {
         const deleteRequests = [];
         for (const sheet of spreadsheet.data.sheets) {
             const sheetTitle = sheet.properties.title;
-            if (monthNames.some(month => sheetTitle.startsWith(month)) && sheet.conditionalFormats) {
-                deleteRequests.push({
-                    deleteConditionalFormatRule: {
-                        sheetId: sheet.properties.sheetId,
-                        index: 0
-                    }
-                });
+            // Update this condition to include the Cumulative Chart sheet
+            if ((monthNames.some(month => sheetTitle.startsWith(month)) || sheetTitle === "Cumulative Chart") && sheet.conditionalFormats) {
+                // Delete rules in reverse order to avoid index shifting problems
+                for (let i = (sheet.conditionalFormats?.length || 0) - 1; i >= 0; i--) {
+                    deleteRequests.push({
+                        deleteConditionalFormatRule: {
+                            sheetId: sheet.properties.sheetId,
+                            index: i
+                        }
+                    });
+                }
             }
         }
 
@@ -208,7 +235,8 @@ async function applyConditionalFormatting({ headers }) {
             const sheetId = sheet.properties.sheetId;
             const sheetTitle = sheet.properties.title;
             
-            if (monthNames.some(month => sheetTitle.startsWith(month))) {
+            // Also update this condition to include the Cumulative Chart sheet
+            if (monthNames.some(month => sheetTitle.startsWith(month)) || sheetTitle === "Cumulative Chart") {
                 // Add time-based rules
                 addRequests.push(
                     {
@@ -268,9 +296,6 @@ async function applyConditionalFormatting({ headers }) {
         throw error;
     }
 }
-if (!SPREADSHEET_ID) {
-    console.error('No spreadsheet ID configured in mainConfig.js');
-}
 async function formatMessageHistory() {
     try {
         if (!SPREADSHEET_ID) {
@@ -292,6 +317,32 @@ async function formatMessageHistory() {
         const daysRef = db.collection('servers').doc(SERVER_ID).collection('days');
         const daysSnapshot = await daysRef.get();
         
+        // Calculate row offset for cumulative chart
+        console.log("Calculating row offset for Cumulative Chart...");
+        let priorDateCount = 0;
+        
+        // Count all documents that don't match current month/year
+        for (const dayDoc of daysSnapshot.docs) {
+            const dateStr = dayDoc.id; // Format: MM-DD-YYYY
+            const [docMonth, docDay, docYear] = dateStr.split('-');
+            
+            // Skip if this is the current month and year
+            if (docMonth === String(currentMonth).padStart(2, '0') && docYear === String(currentYear)) {
+                continue;
+            }
+            
+            // Only count days with messages
+            const dayData = dayDoc.data();
+            if (dayData.messages && dayData.messages.length > 0) {
+                priorDateCount++;
+            }
+        }
+        
+        // Calculate starting row (header row + all previous dates + 1)
+        const cumulativeStartRow = priorDateCount + 2;
+        console.log(`Found ${priorDateCount} prior dates. Cumulative chart will start at row ${cumulativeStartRow}`);
+        
+        // Process current month data for the monthly sheet
         const monthlyData = new Map();
         monthlyData.set(currentSheetName, new Map());
         
@@ -385,6 +436,10 @@ async function formatMessageHistory() {
         
         const { exists, data: existingData, sheetId } = await getOrCreateSheet(sheetName);
         
+        function arraysEqual(a, b) {
+            if (!a || !b || a.length !== b.length) return false;
+            return a.every((val, index) => val === b[index]);
+        }
         // If new sheet or headers need to be updated
         if (!exists || !existingData.length || !arraysEqual(existingData[0], headers)) {
             await sheets.spreadsheets.values.update({
@@ -506,7 +561,8 @@ async function formatMessageHistory() {
             // Immediately add conditional formatting rules for new users
             
         }
-        await applyConditionalFormatting({ headers });
+
+        
         // Auto-resize columns
         await sheets.spreadsheets.batchUpdate({
             spreadsheetId: SPREADSHEET_ID,
@@ -524,16 +580,15 @@ async function formatMessageHistory() {
             }
         });
 
-        console.log('Current month sheet updated successfully');
+        // Update the Cumulative Chart with the current month data
+        console.log(`Updating Cumulative Chart with ${currentMonth}/${currentYear} data starting at row ${cumulativeStartRow}`);
+        await updateCumulativeSheet(currentMonth, currentYear, cumulativeStartRow);
+        await applyConditionalFormatting({ headers });
+        console.log('Current month sheet and Cumulative Chart updated successfully');
     } catch (error) {
         console.error('Error formatting message history:', error);
         throw error;
     }
 }
 
-function arraysEqual(a, b) {
-    if (!a || !b || a.length !== b.length) return false;
-    return a.every((val, index) => val === b[index]);
-}
-
-module.exports = { formatMessageHistory };
+module.exports = { formatMessageHistory, getMaxPositionsAndCreateHeaders};
