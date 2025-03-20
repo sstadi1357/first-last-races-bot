@@ -5,6 +5,7 @@ const { cronSchedule } = require('../config/mainConfig.js');
 const { getLastMessages } = require('../utils/lastMessages');
 const { updateScoresAndLeaderboard, storeLastMessages } = require('../services/firestoreService');
 const { updateAllUserRoles } = require('../services/roleService');
+const {spreadsheetId} = require('../config/mainConfig');
 const db = require('../firebase');
 
 function startScheduler(client) {
@@ -101,7 +102,9 @@ function startScheduler(client) {
                 await updateAllUserRoles(guild, serverId, dateStr);
 
                 console.log(`\n✅ Completed processing for server ${serverId}`);
+                if (spreadsheetId) {
                 formatMessageHistory().catch(console.error);
+                }
             }
 
             console.log('\n=== Points Scheduler Completed! ===');
