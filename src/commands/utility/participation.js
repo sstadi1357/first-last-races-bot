@@ -89,7 +89,6 @@ module.exports = {
                 avg: total / Math.ceil(totalDays / 7)
             }));
             const bestDay = avgDayParticipation.sort((a, b) => b.avg - a.avg)[0];
-
             // Create embed
             const pages = [];
             
