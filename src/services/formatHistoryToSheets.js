@@ -296,30 +296,79 @@ async function applyConditionalFormatting({ headers }) {
         throw error;
     }
 }
-async function formatMessageHistory() {
+async function formatMessageHistory(targetMonth, targetYear) {
     try {
         if (!SPREADSHEET_ID) {
             console.error('No spreadsheet ID available. Skipping sheet updates.');
             return;
         }
-        const { headers, maxPositions } = await getMaxPositionsAndCreateHeaders();
         
-        // Get current month and year
+        // Get current date for defaults
         const now = new Date();
-        const currentMonth = now.getMonth() + 1; // JavaScript months are 0-indexed
-        const currentYear = now.getFullYear();
-        const currentMonthName = getMonthName(currentMonth);
-        const currentSheetName = `${currentMonthName} ${currentYear}`;
         
-        console.log(`Processing only the current month: ${currentSheetName}`);
+        // Use provided values or defaults
+        const monthToProcess = targetMonth !== undefined ? targetMonth : now.getMonth() + 1; // JavaScript months are 0-indexed
+        const yearToProcess = targetYear !== undefined ? targetYear : now.getFullYear();
         
-        // Get all days collection
+        const monthName = getMonthName(monthToProcess);
+        const sheetName = `${monthName} ${yearToProcess}`;
+        
+        console.log(`Processing specified month: ${sheetName}`);
+        
+        // Calculate max positions dynamically for the target month/year
+        console.log(`Analyzing ${monthName} ${yearToProcess} data to determine maximum positions...`);
+        
+        const monthPrefix = String(monthToProcess).padStart(2, '0') + "-";
+        const targetYearStr = String(yearToProcess);
+        
         const daysRef = db.collection('servers').doc(SERVER_ID).collection('days');
         const daysSnapshot = await daysRef.get();
         
-        // Calculate row offset for cumulative chart
+        // Find max positions specifically for the target month/year
+        let maxPositions = 0;
+        
+        for (const dayDoc of daysSnapshot.docs) {
+            const dateStr = dayDoc.id; // Format: MM-DD-YYYY
+            
+            if (!dateStr.startsWith(monthPrefix)) {
+                continue;
+            }
+            
+            // Extract year from document ID and compare with target year
+            const docYear = dateStr.split('-')[2];
+            if (docYear !== targetYearStr) {
+                continue;
+            }
+            
+            const dayData = dayDoc.data();
+            if (dayData.messages && dayData.messages.length > maxPositions) {
+                maxPositions = dayData.messages.length;
+            }
+        }
+        
+        console.log(`Maximum positions for ${monthName} ${yearToProcess}: ${maxPositions}`);
+        
+        // Create headers based on the max positions
+        const headers = ['Date', 'Start Time'];
+        
+        for (let i = 1; i <= maxPositions; i++) {
+            let positionHeader;
+            if (i === 1) positionHeader = '1st';
+            else if (i === 2) positionHeader = '2nd';
+            else if (i === 3) positionHeader = '3rd';
+            else positionHeader = `${i}th`;
+            headers.push(positionHeader);
+        }
+        
+        headers.push('2nd-Last', 'Last', 'End Time');
+        
+        // Calculate row offset for cumulative chart (still needed for the original updateCumulativeSheet call)
         console.log("Calculating row offset for Cumulative Chart...");
         let priorDateCount = 0;
+        
+        // Current month and year (for cumulative chart)
+        const currentMonth = now.getMonth() + 1;
+        const currentYear = now.getFullYear();
         
         // Count all documents that don't match current month/year
         for (const dayDoc of daysSnapshot.docs) {
@@ -342,74 +391,97 @@ async function formatMessageHistory() {
         const cumulativeStartRow = priorDateCount + 2;
         console.log(`Found ${priorDateCount} prior dates. Cumulative chart will start at row ${cumulativeStartRow}`);
         
-        // Process current month data for the monthly sheet
-        const monthlyData = new Map();
-        monthlyData.set(currentSheetName, new Map());
+        // Process the data for the target month
+        console.log(`Looking for documents with prefix: ${monthPrefix} for year ${yearToProcess}`);
         
-        // Current month prefix (e.g., "02-" for February)
-        const monthPrefix = String(currentMonth).padStart(2, '0') + "-";
-        console.log(`Looking for documents with prefix: ${monthPrefix}`);
+        // Create an array to store all the rows (including header)
+        const sheetData = [headers];
         
-        let daysProcessed = 0;
+        // Process and collect all day data
+        let daysWithMessages = [];
         
         for (const dayDoc of daysSnapshot.docs) {
-            const dayData = dayDoc.data();
             const dateStr = dayDoc.id; // Format: MM-DD-YYYY
             
-            // Skip if not current month (by checking if it starts with the month prefix)
+            // Skip if not target month/year
             if (!dateStr.startsWith(monthPrefix)) {
                 continue;
             }
             
-            daysProcessed++;
-            const sheetName = getSheetName(dateStr);
+            // Check year
+            const docYear = dateStr.split('-')[2];
+            if (docYear !== targetYearStr) {
+                continue;
+            }
             
+            const dayData = dayDoc.data();
             if (!dayData.messages?.length) {
                 console.log(`No messages found for ${dateStr}`);
                 continue;
             }
-
-            const sortedMessages = dayData.messages.sort((a, b) => {
+            
+            daysWithMessages.push({
+                dateStr: dateStr,
+                data: dayData
+            });
+        }
+        
+        // Sort days chronologically
+        daysWithMessages.sort((a, b) => {
+            const [aMonth, aDay, aYear] = a.dateStr.split('-').map(Number);
+            const [bMonth, bDay, bYear] = b.dateStr.split('-').map(Number);
+            
+            if (aYear !== bYear) return aYear - bYear;
+            if (aMonth !== bMonth) return aMonth - bMonth;
+            return aDay - bDay;
+        });
+        
+        // Build sheet rows
+        for (const { dateStr, data } of daysWithMessages) {
+            const sortedMessages = data.messages.sort((a, b) => {
                 const dateA = parseTimestamp(a.timestamp);
                 const dateB = parseTimestamp(b.timestamp);
                 return (dateA && dateB) ? dateA - dateB : 0;
             });
-
+            
             // Process first message time
             let startTime = '';
             if (sortedMessages.length > 0) {
                 const firstDate = parseTimestamp(sortedMessages[0].timestamp);
                 if (firstDate) {
-                    startTime = format(firstDate, 'h:mm:ss a')
+                    startTime = format(firstDate, 'h:mm:ss a');
                 }
             }
-
+            
             const positions = Array(maxPositions).fill('NONE');
             sortedMessages.forEach((msg, idx) => {
-                positions[idx] = msg.username;
+                if (idx < maxPositions) {
+                    positions[idx] = msg.username;
+                }
             });
-
+            
             // Process last messages
             let secondLast = 'NONE';
             let last = 'NONE';
             let endTime = '';
-
-            if (dayData.lastMessages) {
-                if (dayData.lastMessages.last) {
-                    last = dayData.lastMessages.last.username;
-                    const lastDate = parseTimestamp(dayData.lastMessages.last.timestamp);
+            
+            if (data.lastMessages) {
+                if (data.lastMessages.last) {
+                    last = data.lastMessages.last.username;
+                    const lastDate = parseTimestamp(data.lastMessages.last.timestamp);
                     if (lastDate) {
                         endTime = format(lastDate, 'h:mm:ss a');
                     }
                 }
-                if (dayData.lastMessages.secondLast) {
-                    secondLast = dayData.lastMessages.secondLast.username;
+                if (data.lastMessages.secondLast) {
+                    secondLast = data.lastMessages.secondLast.username;
                 }
             }
-
+            
             // Change date format from MM-DD-YYYY to MM/DD/YYYY for consistency with sheet formatting
             const [month, day, year] = dateStr.split('-');
             const formattedDate = `${month}/${day}`;
+            
             const newRow = [
                 formattedDate,
                 startTime,
@@ -418,177 +490,144 @@ async function formatMessageHistory() {
                 last,
                 endTime
             ];
-
-            monthlyData.get(currentSheetName).set(dateStr, newRow);
-        }
-
-        console.log(`Processed ${daysProcessed} days for the current month`);
-        
-        // Process current month data
-        const [sheetName, monthData] = Array.from(monthlyData.entries())[0];
-        
-        if (monthData.size === 0) {
-            console.log(`No data found for ${sheetName}, skipping sheet creation/update`);
-            return;
+            
+            sheetData.push(newRow);
         }
         
-        console.log(`Processing sheet: ${sheetName} with ${monthData.size} days of data`);
+        console.log(`Processed ${daysWithMessages.length} days for ${sheetName}`);
         
-        const { exists, data: existingData, sheetId } = await getOrCreateSheet(sheetName);
+        // Get or create the sheet
+        const { exists, sheetId } = await getOrCreateSheet(sheetName);
+        const sheetTitle = exists ? sheetName : sheetName.replace(/\s+/g, '_');
         
-        function arraysEqual(a, b) {
-            if (!a || !b || a.length !== b.length) return false;
-            return a.every((val, index) => val === b[index]);
+        // CRITICAL: Clear the entire sheet first before writing new data
+        // This ensures we start fresh and don't have issues with leftover data
+        try {
+            console.log(`Clearing all data from sheet: ${sheetTitle}`);
+            await sheets.spreadsheets.values.clear({
+                spreadsheetId: SPREADSHEET_ID,
+                range: `${sheetTitle}!A1:Z1000` // Clear a large range to ensure all data is removed
+            });
+        } catch (error) {
+            console.error(`Error clearing sheet: ${error.message}`);
+            // Continue anyway - the update will still work
         }
-        // If new sheet or headers need to be updated
-        if (!exists || !existingData.length || !arraysEqual(existingData[0], headers)) {
+        
+        // Write all data at once
+        if (sheetData.length > 1) { // Only if we have data (header + at least one row)
+            console.log(`Writing ${sheetData.length} rows to sheet ${sheetTitle}`);
             await sheets.spreadsheets.values.update({
                 spreadsheetId: SPREADSHEET_ID,
-                range: `${sheetName}!A1`,
+                range: `${sheetTitle}!A1`,
                 valueInputOption: 'USER_ENTERED',
                 resource: {
-                    values: [headers]
+                    values: sheetData
                 }
             });
-            await applyHeaderFormatting(sheetId);      
-        }
-       
-        
-        const sortedDates = Array.from(monthData.keys()).sort();
-        const valueUpdates = [];
-        const formatRequests = [];
-        let currentRow = 2;
-
-        const usernamesInNewRows = new Set();
-
-        for (const dateStr of sortedDates) {
-            const newRow = monthData.get(dateStr);
-            const formattedDate = newRow[0];
-
-            valueUpdates.push({
-                range: `${sheetName}!A${currentRow}`,
-                values: [newRow]
-            });
-
-            // Collect usernames from this specific row
-            newRow.slice(2, -2).forEach(username => {
-                if (username !== 'NONE') {
-                    usernamesInNewRows.add(username);
+            
+            // Apply header formatting
+            await applyHeaderFormatting(sheetId);
+            
+            // Apply gray background for holiday dates
+            const formatRequests = [];
+            
+            // Start from row 2 (after header) for checking dates
+            for (let rowIndex = 1; rowIndex < sheetData.length; rowIndex++) {
+                const formattedDate = sheetData[rowIndex][0]; // First column is the date
+                try {
+                    const [month, day] = formattedDate.split('/');
+                    const dateForChecking = `${yearToProcess}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                    
+                    const shouldBeGrayBackground = shouldBeGray(dateForChecking);
+                    
+                    if (shouldBeGrayBackground) {
+                        formatRequests.push({
+                            repeatCell: {
+                                range: {
+                                    sheetId: sheetId,
+                                    startRowIndex: rowIndex,
+                                    endRowIndex: rowIndex + 1,
+                                    startColumnIndex: 0,
+                                    endColumnIndex: 1
+                                },
+                                cell: {
+                                    userEnteredFormat: GRAY_BACKGROUND
+                                },
+                                fields: 'userEnteredFormat.backgroundColor'
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error(`Error checking if date should be gray: ${error.message}`);
                 }
-            });
-
-            // Check if the date should be gray (with proper date formatting)
-            try {
-                const currentYear = new Date().getFullYear();
-                const [month, day] = formattedDate.split('/');
-                const dateForChecking = `${currentYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-                
-                const shouldBeGrayBackground = shouldBeGray(dateForChecking);
-                
-                if (shouldBeGrayBackground) {
-                    formatRequests.push({
-                        repeatCell: {
-                            range: {
-                                sheetId: sheetId,
-                                startRowIndex: currentRow - 1,
-                                endRowIndex: currentRow,
-                                startColumnIndex: 0,
-                                endColumnIndex: 1
-                            },
-                            cell: {
-                                userEnteredFormat: GRAY_BACKGROUND
-                            },
-                            fields: 'userEnteredFormat.backgroundColor'
-                        }
-                    });
-                }
-            } catch (error) {
-                console.error(`Error checking if date should be gray: ${error.message}`);
             }
-            currentRow++;
-        }
-
-        if (valueUpdates.length > 0) {
-            await sheets.spreadsheets.values.batchUpdate({
-                spreadsheetId: SPREADSHEET_ID,
-                resource: {
-                    valueInputOption: 'USER_ENTERED',
-                    data: valueUpdates
+            
+            if (formatRequests.length > 0) {
+                await sheets.spreadsheets.batchUpdate({
+                    spreadsheetId: SPREADSHEET_ID,
+                    resource: {
+                        requests: formatRequests
+                    }
+                });
+            }
+            
+            // Collect all unique usernames from the data
+            const allUsernames = new Set();
+            
+            for (let rowIndex = 1; rowIndex < sheetData.length; rowIndex++) {
+                const row = sheetData[rowIndex];
+                // Check all username columns (everything after startTime and before 2nd-Last)
+                for (let colIndex = 2; colIndex < row.length - 2; colIndex++) {
+                    const username = row[colIndex];
+                    if (username !== 'NONE') {
+                        allUsernames.add(username);
+                    }
                 }
-            });
-        }
-
-        if (formatRequests.length > 0) {
+            }
+            
+            // Add any missing username format rules
+            if (allUsernames.size > 0) {
+                console.log(`Adding formatting rules for ${allUsernames.size} usernames`);
+                for (const username of allUsernames) {
+                    await addNewUserToSheet(username);
+                }
+            }
+            
+            // Auto-resize columns
             await sheets.spreadsheets.batchUpdate({
                 spreadsheetId: SPREADSHEET_ID,
                 resource: {
-                    requests: formatRequests
+                    requests: [{
+                        autoResizeDimensions: {
+                            dimensions: {
+                                sheetId: sheetId,
+                                dimension: 'COLUMNS',
+                                startIndex: 0,
+                                endIndex: headers.length
+                            }
+                        }
+                    }]
                 }
             });
+            
+            // Apply conditional formatting
+            await applyConditionalFormatting({ headers });
+        } else {
+            console.log(`No data found for ${sheetName}, sheet was cleared but not populated`);
         }
-
-        // Check for users in new rows without background color rules
-        const spreadsheet = await sheets.spreadsheets.get({
-            spreadsheetId: SPREADSHEET_ID,
-            includeGridData: true
-        });
         
-        const sheet = spreadsheet.data.sheets.find(s => s.properties.title === sheetName);
-        const existingRules = sheet.conditionalFormats.filter(
-            rule => rule.booleanRule && 
-            rule.booleanRule.condition.type === "TEXT_CONTAINS"
-        );
-
-        const existingUsernames = existingRules.map(rule => 
-            rule.booleanRule.condition.values[0].userEnteredValue
-        );
-
-        // Identify usernames without rules from the new rows
-        const missingUsernameRules = [...usernamesInNewRows].filter(
-            username => !existingUsernames.includes(username)
-        );
-
-        // If there are usernames without rules, add them
-        if (missingUsernameRules.length > 0) {
-            console.log('Usernames without background color rules:', missingUsernameRules);
-            
-            // Use the addNewUserToSheet function from userFormatting
-            
-            for (const username of missingUsernameRules) {
-                await addNewUserToSheet(username);
-            }
-
-            // Immediately add conditional formatting rules for new users
-            
+        // Only update cumulative chart if working with current month
+        if (monthToProcess === currentMonth && yearToProcess === currentYear) {
+            console.log(`Updating Cumulative Chart with ${currentMonth}/${currentYear} data starting at row ${cumulativeStartRow}`);
+            await updateCumulativeSheet(currentMonth, currentYear, cumulativeStartRow);
+        } else {
+            console.log(`Skipping Cumulative Chart update because we're processing a non-current month (${monthToProcess}/${yearToProcess})`);
         }
-
         
-        // Auto-resize columns
-        await sheets.spreadsheets.batchUpdate({
-            spreadsheetId: SPREADSHEET_ID,
-            resource: {
-                requests: [{
-                    autoResizeDimensions: {
-                        dimensions: {
-                            sheetId: sheetId,
-                            dimension: 'COLUMNS',
-                            startIndex: 0,
-                            endIndex: headers.length
-                        }
-                    }
-                }]
-            }
-        });
-
-        // Update the Cumulative Chart with the current month data
-        console.log(`Updating Cumulative Chart with ${currentMonth}/${currentYear} data starting at row ${cumulativeStartRow}`);
-        await updateCumulativeSheet(currentMonth, currentYear, cumulativeStartRow);
-        await applyConditionalFormatting({ headers });
-        console.log('Current month sheet and Cumulative Chart updated successfully');
+        console.log(`${sheetName} sheet processed successfully`);
     } catch (error) {
         console.error('Error formatting message history:', error);
         throw error;
     }
 }
-
 module.exports = { formatMessageHistory, getMaxPositionsAndCreateHeaders};

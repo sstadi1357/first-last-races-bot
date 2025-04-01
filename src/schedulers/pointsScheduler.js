@@ -102,8 +102,44 @@ function startScheduler(client) {
                 await updateAllUserRoles(guild, serverId, dateStr);
 
                 console.log(`\n✅ Completed processing for server ${serverId}`);
+                
+                // Check if we should update the sheets
                 if (spreadsheetId) {
-                formatMessageHistory().catch(console.error);
+                    // Get current date to check if it's the 1st of the month
+                    const today = new Date();
+                    // Use LA timezone to be consistent with other date calculations
+                    const todayLA = new Date(today.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+                    const isFirstOfMonth = todayLA.getDate() === 1;
+                    
+                    if (isFirstOfMonth) {
+                        console.log('\n📊 First day of the month detected. Processing both current and previous month sheets...');
+                        
+                        // Calculate previous month and year
+                        const currentMonth = todayLA.getMonth() + 1; // JavaScript months are 0-indexed
+                        const currentYear = todayLA.getFullYear();
+                        
+                        // Previous month logic (handling December to January transition)
+                        const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+                        const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+                        
+                        try {
+                            // First process previous month's data
+                            console.log(`Processing previous month's sheet (${prevMonth}/${prevYear})...`);
+                            await formatMessageHistory(prevMonth, prevYear);
+                            
+                            // Then process current month's data (which may only have 1 day of data so far)
+                            console.log(`Processing current month's sheet (${currentMonth}/${currentYear})...`);
+                            await formatMessageHistory(currentMonth, currentYear);
+                            
+                            console.log('✅ Both months processed successfully');
+                        } catch (error) {
+                            console.error('❌ Error processing month sheets:', error);
+                        }
+                    } else {
+                        // Regular day - just update current month
+                        console.log('\n📊 Updating current month sheet...');
+                        formatMessageHistory().catch(console.error);
+                    }
                 }
             }
 
