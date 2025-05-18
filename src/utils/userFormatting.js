@@ -136,6 +136,14 @@ async function addNewUserToSheet(username) {
         });
 
         const rows = response.data.values || [];
+        
+        // Check if user already exists (case-insensitive, trimmed)
+        const userExists = rows.some(row => row[0] && row[0].trim().toLowerCase() === username.trim().toLowerCase());
+        if (userExists) {
+            console.log(`User ${username} already exists in sheet, skipping addition`);
+            return { username, exists: true };
+        }
+        
         const existingColors = rows.slice(1).map(row => row[1].startsWith('#') ? row[1] : `#${row[1]}`);
         
         // Calculate a new distinct hex color
@@ -154,7 +162,7 @@ async function addNewUserToSheet(username) {
         
         console.log(`Added new user ${username} with color ${newHexColor}`);
         await formatAllUserCells();
-        return { username, hexColor: newHexColor };
+        return { username, hexColor: newHexColor, exists: false };
     } catch (error) {
         console.error('Error adding new user to sheet:', error);
         return false;

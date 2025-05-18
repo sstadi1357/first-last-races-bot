@@ -587,9 +587,25 @@ async function formatMessageHistory(targetMonth, targetYear) {
             
             // Add any missing username format rules
             if (allUsernames.size > 0) {
-                console.log(`Adding formatting rules for ${allUsernames.size} usernames`);
-                for (const username of allUsernames) {
-                    await addNewUserToSheet(username);
+                console.log(`Found ${allUsernames.size} unique usernames in data`);
+                
+                // Fetch existing users from sheet
+                const response = await sheets.spreadsheets.values.get({
+                    spreadsheetId,
+                    range: 'Users!A:B'
+                });
+                const existingUsers = new Set((response.data.values || []).slice(1).map(row => row[0]));
+                
+                // Only add users that don't exist in the sheet
+                const newUsers = [...allUsernames].filter(username => !existingUsers.has(username));
+                
+                if (newUsers.length > 0) {
+                    console.log(`Adding ${newUsers.length} new users to sheet`);
+                    for (const username of newUsers) {
+                        await addNewUserToSheet(username);
+                    }
+                } else {
+                    console.log('No new users to add');
                 }
             }
             

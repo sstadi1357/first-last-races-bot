@@ -271,27 +271,14 @@ async function isTooSimilar(newHex, username) {
 async function updateUserHexInSheet(username, hexColor) {
   try {
     console.log(`Updating user ${username} with hex color ${hexColor} in Users sheet`);
-    
-    // First check if color is too similar to existing colors
-    const similarityCheck = await isTooSimilar(hexColor, username);
-    if (similarityCheck.tooSimilar) {
-      return { 
-        success: false, 
-        reason: 'similar-color',
-        details: similarityCheck
-      };
-    }
-    
     // Fetch current users from the Users sheet
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range: 'Users!A:B'
     });
-    
     const rows = response.data.values || [];
     let userExists = false;
     let rowIndex = -1;
-    
     // Check if user exists and find their row
     for (let i = 1; i < rows.length; i++) {
       if (rows[i] && rows[i][0] === username) {
@@ -300,7 +287,6 @@ async function updateUserHexInSheet(username, hexColor) {
         break;
       }
     }
-    
     if (userExists) {
       // Update existing user's hex color
       console.log(`User ${username} found at row ${rowIndex}, updating hex color`);
@@ -312,7 +298,6 @@ async function updateUserHexInSheet(username, hexColor) {
           values: [[hexColor]]
         }
       });
-      
       // Format the cells after updating the value
       await formatAllUserCells();
     } else {
@@ -326,16 +311,13 @@ async function updateUserHexInSheet(username, hexColor) {
           values: [[username, hexColor]]
         }
       });
-      
       // Get the row where the new user was added
       const updatedResponse = await sheets.spreadsheets.values.get({
         spreadsheetId,
         range: 'Users!A:B'
       });
-      
       const updatedRows = updatedResponse.data.values || [];
       let newRowIndex = -1;
-      
       // Find the row where the new user was added
       for (let i = 1; i < updatedRows.length; i++) {
         if (updatedRows[i] && updatedRows[i][0] === username) {
@@ -343,13 +325,11 @@ async function updateUserHexInSheet(username, hexColor) {
           break;
         }
       }
-      
       if (newRowIndex > 0) {
         // Format the cells for the new user
         await formatAllUserCells()
       }
     }
-    
     console.log(`Successfully updated Users sheet for user ${username}`);
     return { success: true };
   } catch (error) {
@@ -363,35 +343,17 @@ module.exports = {
   async execute(message) {
     // Ignore bot messages, DMs, and messages not in the hex channel
     if (message.author.bot || !message.guild || message.channel.id !== hexChannelId) return;
-    
     // Check if message is a valid hex code
     let hex = message.content.trim();
     if (hex.startsWith('#') && hex.length === 7 && /^#[0-9A-Fa-f]{6}$/.test(hex)) {
       // Valid hex code, continue processing
       console.log(`Valid hex code received: ${hex} from user ${message.author.username}`);
-      
       // Update the user's hex in the sheet
       const username = message.author.username;
       const result = await updateUserHexInSheet(username, hex);
-      
       if (result.success) {
         // React to message to indicate success
         await message.react('✅');
-      } else if (result.reason === 'similar-color') {
-        // Color is too similar to existing color
-        await message.delete();
-        
-        let reasonMsg = '';
-        if (result.details.reason === "too-dark") {
-          reasonMsg = `Your color ${hex} is too dark and similar to another dark color already in use by ${result.details.similarTo}. Please choose a more distinct or brighter color.`;
-        } else if (result.details.reason === "too-light") {
-          reasonMsg = `Your color ${hex} is too light and similar to another light color already in use by ${result.details.similarTo}. Please choose a more distinct or darker color.`;
-        } else {
-          const threshold = result.details.threshold || 50;
-          reasonMsg = `Your color ${hex} is too similar to ${result.details.similarTo}'s color. Please choose a more distinct color. (Similarity: ${Math.round(result.details.distance)} out of ${Math.round(threshold)} threshold)`;
-        }
-        
-        await message.author.send(reasonMsg);
       } else {
         // There was a technical error
         await message.delete();
@@ -403,7 +365,6 @@ module.exports = {
       await message.author.send('Please enter a valid 6-digit hex code starting with # (e.g., #FF0000 for red)');
       return null;
     }
-    
     return true;
   }
 };
