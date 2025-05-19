@@ -2,10 +2,10 @@
 require('dotenv').config(); // Load environment variables from a .env file
 // Import modules
 const { REST, Routes } = require('discord.js');
-const clientId = process.env.DISCORD_CLIENT_ID;
+const clientId = process.env.CLIENT_ID;
 const fs = require('fs');
 const path = require('path');
-
+console.log("DISCORD_TOKEN:", process.env.DISCORD_TOKEN);
 // Array to store command data to be registered globally
 const commands = [];
 
@@ -38,7 +38,7 @@ for (const folder of commandFolders) {
 }
 
 // Initialize an instance of the REST module with API version '10' and set bot token
-const rest = new REST({ version: '10' }).setToken(token);
+const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
 // Immediately-invoked function expression (IIFE) to deploy commands globally
 (async () => {
@@ -54,5 +54,14 @@ const rest = new REST({ version: '10' }).setToken(token);
         console.log(`Successfully reloaded ${data.length} application (/) commands globally.`);
     } catch (error) {
         console.error(error); // Log any errors that occur during deployment
+    }
+})();
+
+(async () => {
+    try {
+        const commands = await rest.get(Routes.applicationCommands(clientId));
+        console.log(commands);
+    } catch (error) {
+        console.error(error);
     }
 })();
