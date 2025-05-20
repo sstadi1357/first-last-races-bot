@@ -27,6 +27,14 @@ module.exports = {
         if (!dateRegex.test(dateStr)) {
             return await interaction.editReply('Please provide a valid date in MM-DD-YYYY format with zeroes (e.g., 01-20-2025).');
         }
+        // Block today's date or future dates
+        const [month, day, year] = dateStr.split('-').map(Number);
+        const inputDate = new Date(year, month - 1, day);
+        const now = new Date();
+        now.setHours(0, 0, 0, 0); // Set to midnight for comparison
+        if (inputDate >= now) {
+            return await interaction.editReply('You cannot use today\'s date or a future date for the history leaderboard. Please choose a past date.');
+        }
         try {
             const serverId = interaction.guildId;
             const serverRef = db.collection('servers').doc(serverId);

@@ -18,126 +18,109 @@ module.exports = {
 
         try {
             const serverId = interaction.guildId;
-            const daysRef = await db.collection('servers').doc(serverId).collection('days').get();
+            const daysSnapshot = await db.collection('servers').doc(serverId).collection('days').get();
 
-            // Initialize tracking objects
-            const userParticipation = new Map(); // Track each user's participation
-            const dailyStats = new Map(); // Track participation by day
-            const dayOfWeekStats = new Map(); // Track participation by day of week
-            let totalDays = 0;
+            // Gather all dates (exclude today)
+            let allDates = [];
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            daysSnapshot.forEach(doc => {
+                const [month, day, year] = doc.id.split('-').map(Number);
+                const docDate = new Date(year, month - 1, day);
+                docDate.setHours(0, 0, 0, 0);
+                if (docDate < today) {
+                    allDates.push(doc.id);
+                }
+            });
+            allDates = allDates.sort((a, b) => {
+                const [am, ad, ay] = a.split('-').map(Number);
+                const [bm, bd, by] = b.split('-').map(Number);
+                return new Date(ay, am - 1, ad) - new Date(by, bm - 1, bd);
+            });
+            const lastDate = allDates[allDates.length - 1];
 
-            // Process each day
-            daysRef.forEach(doc => {
+            // Map userId -> { userId, count, firstDate }
+            const userParticipation = new Map();
+            daysSnapshot.forEach(doc => {
+                if (!allDates.includes(doc.id)) return;
                 const data = doc.data();
-                totalDays++;
-
                 if (data.messages) {
-                    // Track daily participation count
-                    const date = doc.id;
-                    const participantCount = data.messages.length;
-                    dailyStats.set(date, participantCount);
-
-                    // Track day of week participation
-                    const [month, day, year] = date.split('-').map(Number);
-                    const dayOfWeek = new Date(year, month - 1, day).getDay();
-                    dayOfWeekStats.set(dayOfWeek, (dayOfWeekStats.get(dayOfWeek) || 0) + participantCount);
-
-                    // Track user participation
                     data.messages.forEach(msg => {
                         if (!userParticipation.has(msg.userId)) {
                             userParticipation.set(msg.userId, {
                                 userId: msg.userId,
-                                username: msg.username, // Keep username as fallback
                                 count: 0,
-                                firstPlaces: 0
+                                firstDate: doc.id
                             });
                         }
                         const userStats = userParticipation.get(msg.userId);
                         userStats.count++;
-                        if (data.messages.indexOf(msg) === 0) {
-                            userStats.firstPlaces++;
+                        if (doc.id < userStats.firstDate) {
+                            userStats.firstDate = doc.id;
                         }
                     });
                 }
             });
 
-            // Fetch display names for all users
+            // Helper to count days between two MM-DD-YYYY dates (inclusive, but subtract 1 for percentage)
+            function daysBetween(start, end) {
+                const [sm, sd, sy] = start.split('-').map(Number);
+                const [em, ed, ey] = end.split('-').map(Number);
+                const startDate = new Date(sy, sm - 1, sd);
+                const endDate = new Date(ey, em - 1, ed);
+                return Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 3;
+            }
+
+            // Fetch display names for all users from the server
             const userDisplayNames = new Map();
-            for (const [userId, stats] of userParticipation.entries()) {
-                try {
-                    const member = await interaction.guild.members.fetch(userId);
+            await interaction.guild.members.fetch(); // Fetch all members
+            for (const [userId] of userParticipation.entries()) {
+                const member = interaction.guild.members.cache.get(userId);
+                if (member) {
                     userDisplayNames.set(userId, member.displayName);
-                } catch (error) {
-                    userDisplayNames.set(userId, stats.username); // Fallback to username if member not found
                 }
             }
 
-            // Calculate most active days
-            const sortedDays = [...dailyStats.entries()]
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 5);
+            // Prepare users with percentage (exclude users with no display name)
+            const usersWithPercent = Array.from(userParticipation.values()).map(user => {
+                let daysActive = daysBetween(user.firstDate, lastDate) - 1;
+                if (daysActive < 1) daysActive = 1;
+                return {
+                    ...user,
+                    displayName: userDisplayNames.get(user.userId),
+                    percent: daysActive > 0 ? user.count / daysActive : 0
+                };
+            }).filter(user => user.displayName).sort((a, b) => b.percent - a.percent);
 
-            // Calculate most active users
-            const sortedUsers = [...userParticipation.entries()]
-                .sort((a, b) => b[1].count - a[1].count)
-                .slice(0, 5);
+            const page1Description = usersWithPercent.map((user, idx) => 
+                `**${idx + 1}.** ${user.displayName}: ${(user.percent * 100).toFixed(1)}%`
+            ).join('\n') || 'No data';            // Page 2: Raw participation count
+            const usersByCount = Array.from(userParticipation.values()).map(user => ({
+                ...user,
+                displayName: userDisplayNames.get(user.userId)
+            })).filter(user => user.displayName).sort((a, b) => b.count - a.count);
 
-            // Calculate best day of week
-            const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-            const avgDayParticipation = [...dayOfWeekStats.entries()].map(([day, total]) => ({
-                day: daysOfWeek[day],
-                avg: total / Math.ceil(totalDays / 7)
-            }));
-            const bestDay = avgDayParticipation.sort((a, b) => b.avg - a.avg)[0];
-            // Create embed
-            const pages = [];
-            
-            // Page 1: Most Active Users
-            pages.push(new EmbedBuilder()
-                .setColor('#0099FF')
-                .setTitle('📊 Participation Statistics - Most Active Users')
-                .addFields({
-                    name: '🏆 Most Active Users',
-                    value: sortedUsers.map(([userId, stats], index) => 
-                        `${index + 1}. ${userDisplayNames.get(userId)} - ${stats.count} participations ` 
-                    ).join('\n') || 'No data',
-                    inline: false
-                })
-                .setTimestamp()
-                .setFooter({ text: 'Page 1/3 • Statistics are updated daily' }));
+            const page2Description = usersByCount.map((user, idx) =>
+                `**${idx + 1}.** ${user.displayName}: ${user.count} participations`
+            ).join('\n') || 'No data';
 
-            // Page 2: Most Active Days
-            pages.push(new EmbedBuilder()
-                .setColor('#0099FF')
-                .setTitle('📊 Participation Statistics - Most Active Days')
-                .addFields({
-                    name: '📅 Most Active Days',
-                    value: sortedDays.map(([date, count], index) => 
-                        `${index + 1}. ${date} - ${count} participants`
-                    ).join('\n') || 'No data',
-                    inline: false
-                })
-                .setTimestamp()
-                .setFooter({ text: 'Page 2/3 • Statistics are updated daily' }));
-
-            // Page 3: Average Participation
-            pages.push(new EmbedBuilder()
-                .setColor('#0099FF')
-                .setTitle('📊 Participation Statistics - Average Participation')
-                .addFields({
-                    name: '📈 Average Participation',
-                    value: [
-                        `Most Active Day: ${bestDay.day} (avg. ${bestDay.avg.toFixed(1)} participants)`,
-                        `Total Days Tracked: ${totalDays}`,
-                        `Total Unique Participants: ${userParticipation.size}`
-                    ].join('\n'),
-                    inline: false
-                })
-                .setTimestamp()
-                .setFooter({ text: 'Page 3/3 • Statistics are updated daily' }));
+            // Embeds
+            const embeds = [
+                new EmbedBuilder()
+                    .setColor('#0099FF')
+                    .setTitle('📊 Participation Rate (Excluding Today)')
+                    .setDescription(page1Description)
+                    .setFooter({ text: 'Page 1/2 • Sorted by participation rate (since first activity, excluding today)' })
+                    .setTimestamp(),
+                new EmbedBuilder()
+                    .setColor('#0099FF')
+                    .setTitle('📊 Raw Participation Count')
+                    .setDescription(page2Description)
+                    .setFooter({ text: 'Page 2/2 • Sorted by total participations' })
+                    .setTimestamp()
+            ];
 
             let currentPageIndex = 0;
-
             const generateButtons = (pageIndex) => {
                 return new ActionRowBuilder()
                     .addComponents(
@@ -155,45 +138,40 @@ module.exports = {
                             .setCustomId('next')
                             .setLabel('Next ▶️')
                             .setStyle(ButtonStyle.Primary)
-                            .setDisabled(pageIndex === pages.length - 1),
+                            .setDisabled(pageIndex === embeds.length - 1),
                         new ButtonBuilder()
                             .setCustomId('last')
                             .setLabel('Last ⏩')
                             .setStyle(ButtonStyle.Primary)
-                            .setDisabled(pageIndex === pages.length - 1)
+                            .setDisabled(pageIndex === embeds.length - 1)
                     );
             };
 
             const response = await interaction.editReply({
-                embeds: [pages[currentPageIndex]],
+                embeds: [embeds[currentPageIndex]],
                 components: [generateButtons(currentPageIndex)]
             });
 
-            const collector = response.createMessageComponentCollector({ time: 300000 }); // 5 minutes
-
+            const collector = response.createMessageComponentCollector({ time: 300000 });
             collector.on('collect', async (i) => {
                 if (i.user.id !== interaction.user.id) {
                     await i.reply({ content: 'You cannot use these buttons.', ephemeral: true });
                     return;
                 }
-
                 switch (i.customId) {
                     case 'first': currentPageIndex = 0; break;
                     case 'previous': currentPageIndex = Math.max(0, currentPageIndex - 1); break;
-                    case 'next': currentPageIndex = Math.min(pages.length - 1, currentPageIndex + 1); break;
-                    case 'last': currentPageIndex = pages.length - 1; break;
+                    case 'next': currentPageIndex = Math.min(embeds.length - 1, currentPageIndex + 1); break;
+                    case 'last': currentPageIndex = embeds.length - 1; break;
                 }
-
                 await i.update({
-                    embeds: [pages[currentPageIndex]],
+                    embeds: [embeds[currentPageIndex]],
                     components: [generateButtons(currentPageIndex)]
                 });
             });
-
             collector.on('end', async () => {
                 await response.edit({ components: [] }).catch(() => {});
             });
-
         } catch (error) {
             console.error('Error creating participation stats:', error);
             await interaction.editReply('Error retrieving participation statistics. Please try again later.');
