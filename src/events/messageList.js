@@ -31,7 +31,7 @@ module.exports = {
 
       // Retrieve the existing messages array
       const dayDoc = await dayDocRef.get();
-      const messages = dayDoc.data().messages || [];
+      const messages = dayDoc.data().messages || []; 
 
       // Check if this user's first message is already logged
       const userExists = messages.some(msg => msg.userId === message.author.id);
@@ -54,6 +54,13 @@ module.exports = {
         messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
         await dayDocRef.update({ messages });
+
+        // React to the message with a checkmark
+        try {
+          await message.react('✅');
+        } catch (reactError) {
+          console.error('Error reacting to message:', reactError);
+        }
 
         console.log(
           `Logged first message for user ${message.author.tag} in races channel on ${today} in server ${serverId}`

@@ -1,6 +1,9 @@
 // services/roleService.js
 const db = require('../firebase');
 const {flairAnnouncement, flairAnnouncementChannelId, ROLES} = require('../config/mainConfig');
+const sheets = require('../sheets');
+const { spreadsheetId } = require('../config/mainConfig');
+
 async function announceRole(guild, member, roleName, yesterdayDateStr) {
     try {
         const announcementsChannel = guild.channels.cache.find(channel => 
@@ -65,6 +68,7 @@ async function updateUserRoles(guild, userId, score, yesterdayDateStr) {
                 await member.roles.add(ROLES.FIRST_LAST.id);
                 console.log(`✅ Added First/Last role to ${member.user.username}`);
                 await announceRole(guild, member, ROLES.FIRST_LAST.name, yesterdayDateStr);
+                await logFlairAchievementToSheet(member.displayName, ROLES.FIRST_LAST.name, yesterdayDateStr);
             } catch (error) {
                 console.error(`❌ Error adding First/Last role: ${error.message}`);
             }
@@ -88,6 +92,7 @@ async function updateUserRoles(guild, userId, score, yesterdayDateStr) {
                         await member.roles.add(roleData.id);
                         console.log(`✅ Added ${roleName} role to ${member.user.username}`);
                         await announceRole(guild, member, roleData.name, yesterdayDateStr);
+                        await logFlairAchievementToSheet(member.displayName, roleData.name, yesterdayDateStr);
                     } catch (error) {
                         console.error(`❌ Error adding ${roleName} role: ${error.message}`);
                     }
@@ -115,6 +120,32 @@ async function updateAllUserRoles(guild, serverId, yesterdayDateStr) {
         console.log('✅ Completed role updates for all users');
     } catch (error) {
         console.error('❌ Error updating roles:', error);
+    }
+}
+
+async function logFlairAchievementToSheet(user, flairName, dateStr) {
+    try {
+        const sheetName = 'Flair Achievements';
+        // Read all rows to check if this user/flair combo already exists
+        const getRes = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: `${sheetName}!A:C`,
+        });
+        const rows = getRes.data.values || [];
+        const alreadyLogged = rows.some(row => row[0] === user && row[1] === flairName);
+        if (alreadyLogged) return;
+        // Append new row
+        await sheets.spreadsheets.values.append({
+            spreadsheetId,
+            range: `${sheetName}!A:C`,
+            valueInputOption: 'USER_ENTERED',
+            requestBody: {
+                values: [[user, flairName, dateStr]]
+            }
+        });
+        console.log(`Logged flair achievement: ${user} - ${flairName} on ${dateStr}`);
+    } catch (error) {
+        console.error('Error logging flair achievement to sheet:', error);
     }
 }
 

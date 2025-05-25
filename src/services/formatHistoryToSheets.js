@@ -6,6 +6,8 @@ const { shouldBeGray } = require('../config/holidayDates');
 const { serverId, spreadsheetId } = require('../config/mainConfig');
 const { generateUserFormatRules, addNewUserToSheet, fetchUsersFromSheet } = require('../utils/userFormatting');
 const { updateCumulativeSheet } = require('../functions/sheetCumulative');
+const { logLeaderboardPointsToSheet } = require('./pointsToSheet');
+
 // Add after the imports at the top
 function hexToRgb(hex) {
     hex = hex.replace(/^#/, '');
@@ -639,7 +641,30 @@ async function formatMessageHistory(targetMonth, targetYear) {
         } else {
             console.log(`Skipping Cumulative Chart update because we're processing a non-current month (${monthToProcess}/${yearToProcess})`);
         }
-        
+
+        // Check if yesterday's date is already the last row in the Cumulative Points sheet
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = `${yesterday.getMonth() + 1}/${yesterday.getDate()}`;
+        const cumulativePointsSheetName = 'Cumulative Points';
+        try {
+            const getRes = await sheets.spreadsheets.values.get({
+                spreadsheetId,
+                range: `${cumulativePointsSheetName}!A:A`,
+            });
+            const rows = getRes.data.values || [];
+            const lastRow = rows.length > 1 ? rows[rows.length - 1][0] : null;
+            if (lastRow !== yesterdayStr) {
+                await logLeaderboardPointsToSheet(SERVER_ID);
+            } else {
+                console.log(`Cumulative Points sheet already has a row for ${yesterdayStr}, skipping logLeaderboardPointsToSheet.`);
+            }
+        } catch (err) {
+            console.error('Error checking Cumulative Points sheet for yesterday:', err);
+            // Fallback: still try to log
+            await logLeaderboardPointsToSheet(SERVER_ID);
+        }
+    
         console.log(`${sheetName} sheet processed successfully`);
     } catch (error) {
         console.error('Error formatting message history:', error);
