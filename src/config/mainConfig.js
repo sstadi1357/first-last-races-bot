@@ -48,6 +48,8 @@ const flairAnnouncement = '<member> got the "<roleName>" flair in the First/Last
 // Role (flair) tiers and their corresponding points
 const ROLES = {
     PINK: { points: 5000, id: '1336556598998601760', name: '5000 Point God', color: 'pink'},
+    LIGHT_PINK: { points: 4000, id: '1356840726536917002', name: '4000 Points', color: 'light_pink'},
+    DARK_PURPLE: { points: 3000, id: '1356839854402437180', name: '3000 Points', color: 'dark_purple'},
     PURPLE: { points: 2000, id: '1336556534217441370', name: '2000 Points', color: 'purple' },
     BLUE: { points: 1000, id: '1336556482220785737', name: '1000 Points', color: 'blue' },
     DARK_GREEN: { points: 500, id: '1336556444954132480', name: '500 Points', color: 'dark green' },
@@ -82,7 +84,7 @@ const scoring = {
   }
   //Time to schedule the points scheduler.
 const cronSchedule = {
-        time: '21 10 * * *',
+        time: '5 0 * * *',
         timezone: 'America/Los_Angeles'
 }
 

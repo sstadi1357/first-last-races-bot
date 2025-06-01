@@ -13,79 +13,94 @@ function formatTimestamp(timestamp) {
 }
 
 async function getLastMessages(guild, startOfDay, endOfDay) {
-  const messages = new Map();
-  
-  // Find the races channel
+  console.log(`\n🔍 Looking for races channel with ID: ${mainChannelId}`);
   const racesChannel = guild.channels.cache.find(channel => 
     channel.type === 0 && channel.viewable && channel.id === mainChannelId
   );
 
   if (!racesChannel) {
-    console.log('Races channel not found in this guild');
+    console.log('❌ Races channel not found in this guild');
     return {
       lastMessageInfo: null,
       secondLastMessageInfo: null
     };
   }
 
-  console.log(`Checking races channel for messages...`);
+  console.log(`✅ Found races channel: ${racesChannel.name}`);
 
-  try {
-    console.log(`Fetching messages from races channel`);
-    const channelMessages = await racesChannel.messages.fetch({ limit: 100 });
-    console.log(`Found ${channelMessages.size} messages in races channel`);
-
-    // Filter messages from yesterday
-    const yesterdaysMessages = channelMessages.filter(msg => {
-      const msgTime = new Date(msg.createdTimestamp);
-      return !msg.author.bot && 
-             msgTime >= startOfDay &&
-             msgTime <= endOfDay;
-    });
-
-    // Add all yesterday's messages to our map
-    yesterdaysMessages.forEach(msg => {
-      messages.set(msg.id, msg);
-    });
-  } catch (error) {
-    console.error(`Error fetching messages from races channel:`, error);
-  }
-
-  // Sort messages by timestamp
-  const sortedMessages = Array.from(messages.values())
-    .sort((a, b) => b.createdTimestamp - a.createdTimestamp);
-
-  console.log(`Found ${sortedMessages.length} total messages from yesterday in races channel`);
-  
   let lastMessageInfo = null;
   let secondLastMessageInfo = null;
+  let lastUserId = null;
+  let fetchedAll = false;
+  let beforeId = undefined;
 
-  if (sortedMessages.length > 0) {
-    // Get last message
-    lastMessageInfo = {
-      userId: sortedMessages[0].author.id,
-      username: sortedMessages[0].author.username,
-      timestamp: formatTimestamp(sortedMessages[0].createdTimestamp),
-      messageId: sortedMessages[0].id  // Added message ID
-    };
-    console.log(`Last message in races channel by: ${lastMessageInfo.username}`);
+  while (!fetchedAll) {
+    const options = { limit: 100 };
+    if (beforeId) options.before = beforeId;
+    const channelMessages = await racesChannel.messages.fetch(options);
+    if (channelMessages.size === 0) break;
 
-    // Find second last message from a different user
-    const secondLastMessage = sortedMessages.find(msg => 
-      msg.author.id !== lastMessageInfo.userId
-    );
+    // Sort messages from newest to oldest
+    const sortedMessages = Array.from(channelMessages.values()).sort((a, b) => b.createdTimestamp - a.createdTimestamp);
 
-    if (secondLastMessage) {
-      secondLastMessageInfo = {
-        userId: secondLastMessage.author.id,
-        username: secondLastMessage.author.username,
-        timestamp: formatTimestamp(secondLastMessage.createdTimestamp),
-        messageId: secondLastMessage.id  // Added message ID
-      };
-      console.log(`Second last message in races channel by: ${secondLastMessageInfo.username}`);
-    } else {
-      console.log('No second last message from a different user found in races channel');
+    for (const msg of sortedMessages) {
+      const msgTime = new Date(msg.createdTimestamp);
+      if (msgTime < startOfDay) {
+        fetchedAll = true;
+        break;
+      }
+      if (msgTime > endOfDay) continue; // skip messages after endOfDay (shouldn't happen, but safe)
+      if (msg.author.bot) continue;
+
+      if (!lastMessageInfo) {
+        lastMessageInfo = {
+          userId: msg.author.id,
+          username: msg.author.username,
+          timestamp: formatTimestamp(msg.createdTimestamp),
+          messageId: msg.id
+        };
+        lastUserId = msg.author.id;
+        continue;
+      }
+      if (!secondLastMessageInfo && msg.author.id !== lastUserId) {
+        secondLastMessageInfo = {
+          userId: msg.author.id,
+          username: msg.author.username,
+          timestamp: formatTimestamp(msg.createdTimestamp),
+          messageId: msg.id
+        };
+        fetchedAll = true;
+        break;
+      }
     }
+    // Prepare for next batch
+    beforeId = sortedMessages[sortedMessages.length - 1]?.id;
+    if (!beforeId) break;
+  }
+
+  // React to the last and second last messages with a ballot box with check
+  try {
+    if (lastMessageInfo && lastMessageInfo.messageId) {
+      const msg = await racesChannel.messages.fetch(lastMessageInfo.messageId).catch(() => null);
+      if (msg) await msg.react('☑️');
+    }
+    if (secondLastMessageInfo && secondLastMessageInfo.messageId) {
+      const msg = await racesChannel.messages.fetch(secondLastMessageInfo.messageId).catch(() => null);
+      if (msg) await msg.react('☑️');
+    }
+  } catch (reactError) {
+    console.error('Error reacting to last/second last message:', reactError);
+  }
+
+  if (lastMessageInfo) {
+    console.log(`\n✅ Last message found: ${lastMessageInfo.username} at ${lastMessageInfo.timestamp}`);
+  } else {
+    console.log('❌ No messages found for the specified time range');
+  }
+  if (secondLastMessageInfo) {
+    console.log(`✅ Second last message found: ${secondLastMessageInfo.username} at ${secondLastMessageInfo.timestamp}`);
+  } else if (lastMessageInfo) {
+    console.log('❌ No second last message from a different user found');
   }
 
   return {

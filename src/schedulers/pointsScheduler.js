@@ -83,26 +83,6 @@ function startScheduler(client) {
                 console.log('\n🔎 Fetching last messages from Discord...');
                 const { lastMessageInfo, secondLastMessageInfo } = await getLastMessages(guild, startOfDay, endOfDay);
                 
-                // React to the last and second last messages with a blue checkmark
-                try {
-                    if (lastMessageInfo && lastMessageInfo.messageId) {
-                        const channel = guild.channels.cache.get(lastMessageInfo.channelId);
-                        if (channel) {
-                            const msg = await channel.messages.fetch(lastMessageInfo.messageId).catch(() => null);
-                            if (msg) await msg.react('🟦');
-                        }
-                    }
-                    if (secondLastMessageInfo && secondLastMessageInfo.messageId) {
-                        const channel = guild.channels.cache.get(secondLastMessageInfo.channelId);
-                        if (channel) {
-                            const msg = await channel.messages.fetch(secondLastMessageInfo.messageId).catch(() => null);
-                            if (msg) await msg.react('🟦');
-                        }
-                    }
-                } catch (reactError) {
-                    console.error('Error reacting to last/second last message:', reactError);
-                }
-
                 // Now lastMessageInfo and secondLastMessageInfo will include messageId property
                 console.log('\n💾 Storing last messages in Firestore...');
                 await storeLastMessages(serverDocRef, dateStr, lastMessageInfo, secondLastMessageInfo);

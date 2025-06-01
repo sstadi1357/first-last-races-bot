@@ -25,10 +25,18 @@ module.exports = {
             return await interaction.editReply('No leaderboard data found for this date. Please choose a date with data.');
         }
         const data = doc.data();
+        
+        // Fetch all members to get display names
+        await interaction.guild.members.fetch();
+        
         const embed = new EmbedBuilder()
             .setColor('#0099FF')
             .setTitle(`📊 Leaderboard for ${date}`)
-            .setDescription(data.rankings.map((user, i) => `**${i + 1}.** ${user.username} - ${user.score} points`).join('\n') || 'No data')
+            .setDescription(data.rankings.map((user, i) => {
+                const member = interaction.guild.members.cache.get(user.userId);
+                const displayName = member ? member.displayName : user.username;
+                return `**${i + 1}.** ${displayName} - ${user.score} points`;
+            }).join('\n') || 'No data')
             .setTimestamp();
         await interaction.editReply({ embeds: [embed] });
     }
