@@ -83,7 +83,8 @@ const scoring = {
     } 
   }
   //Time to schedule the points scheduler.
-const cronSchedule = {
+
+  const cronSchedule = {
         time: '5 0 * * *',
         timezone: 'America/Los_Angeles'
 }

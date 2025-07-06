@@ -4,7 +4,9 @@ const {
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle
-} = require('discord.js');const db = require('../../firebase');
+} = require('discord.js');
+const db = require('../../firebase');
+const { parseDate, formatDateForDisplay } = require('../../utils/dateParser');
 
 // This function returns a label for the position based on the index
 function getPositionLabel(index) {
@@ -25,20 +27,23 @@ module.exports = {
         .setDescription('View message history for a specific day') // Command description
         .addStringOption(option =>
             option.setName('date') // Option name
-                .setDescription('Date in MM-DD-YYYY format') // Option description
+                .setDescription('Date (e.g., "June 1st", "yesterday", "6/1", "01-15-2024")') // Option description
                 .setRequired(true) // Option is required
         ),
 
     async execute(interaction) {
         await interaction.deferReply(); // Defer the reply to allow time for processing
 
-        const dateStr = interaction.options.getString('date'); // Get the date string from the command options
-        const dateRegex = /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])-(\d{4})$/; // Regex to validate the date format (MM-DD-YYYY)
-
-        // Validate the date format
-        if (!dateRegex.test(dateStr)) {
-            return await interaction.editReply('Please provide a valid date in MM-DD-YYYY format with zeroes (e.g., 01-20-2025).');
+        const dateInput = interaction.options.getString('date'); // Get the date string from the command options
+        
+        // Parse the date input using the new date parser
+        const dateResult = parseDate(dateInput);
+        if (!dateResult.success) {
+            return await interaction.editReply(`❌ Invalid date format: ${dateResult.error}\n\nTry formats like:\n• "June 1st" or "June 1"\n• "yesterday" or "today"\n• "3 days ago"\n• "6/1" or "6/1/2024"\n• "01-15-2024"`);
         }
+
+        const dateStr = dateResult.formatted;
+        const displayDate = formatDateForDisplay(dateStr);
 
         try {
             const serverId = interaction.guildId; // Get the server ID
@@ -47,7 +52,7 @@ module.exports = {
 
             // Check if the document exists
             if (!dayDoc.exists) {
-                return await interaction.editReply(`No messages recorded for ${dateStr}.`);
+                return await interaction.editReply(`No messages recorded for ${displayDate}.`);
             }
 
             const data = dayDoc.data(); // Get the data from the document
@@ -99,7 +104,7 @@ module.exports = {
                 const generateEmbed = (pageIndex) => {
                     return new EmbedBuilder()
                         .setColor('#0099FF')
-                        .setTitle(`📅 Message History for ${dateStr} (Page ${pageIndex + 1}/${pages.length})`)
+                        .setTitle(`📅 Message History for ${displayDate} (Page ${pageIndex + 1}/${pages.length})`)
                         .setDescription(pages[pageIndex])
                         .setTimestamp();
                 };
@@ -171,7 +176,7 @@ module.exports = {
             // For a single page, create and send the embed
             const embed = new EmbedBuilder()
                 .setColor('#0099FF')
-                .setTitle(`📅 Message History for ${dateStr}`)
+                .setTitle(`📅 Message History for ${displayDate}`)
                 .setDescription(description)
                 .setTimestamp();
             
