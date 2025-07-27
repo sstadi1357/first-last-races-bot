@@ -6,7 +6,7 @@ const { shouldBeGray } = require('../config/holidayDates');
 const { serverId, spreadsheetId } = require('../config/mainConfig');
 const { generateUserFormatRules, addNewUserToSheet, fetchUsersFromSheet } = require('../utils/userFormatting');
 const { updateCumulativeSheet } = require('../functions/sheetCumulative');
-const { logLeaderboardPointsToSheet } = require('./pointsToSheet');
+const { logLeaderboardPointsToSheet, logHistoricLeaderboardsToSheet } = require('./pointsToSheet');
 
 // Add after the imports at the top
 function hexToRgb(hex) {
@@ -659,10 +659,14 @@ async function formatMessageHistory(targetMonth, targetYear) {
             } else {
                 console.log(`Cumulative Points sheet already has a row for ${yesterdayStr}, skipping logLeaderboardPointsToSheet.`);
             }
+            
+            // Also log historic leaderboards
+            await logHistoricLeaderboardsToSheet(SERVER_ID);
         } catch (err) {
             console.error('Error checking Cumulative Points sheet for yesterday:', err);
             // Fallback: still try to log
             await logLeaderboardPointsToSheet(SERVER_ID);
+            await logHistoricLeaderboardsToSheet(SERVER_ID);
         }
     
         console.log(`${sheetName} sheet processed successfully`);

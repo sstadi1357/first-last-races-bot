@@ -7,7 +7,7 @@ const { updateScoresAndLeaderboard, storeLastMessages } = require('../services/f
 const { updateAllUserRoles } = require('../services/roleService');
 const {spreadsheetId} = require('../config/mainConfig');
 const db = require('../firebase');
-const { logLeaderboardPointsToSheet } = require('../services/pointsToSheet');
+const { logLeaderboardPointsToSheet, logHistoricLeaderboardsToSheet } = require('../services/pointsToSheet');
 
 async function writeLeaderboardToHistory(serverId, date, rankings) {
     const serverRef = db.collection('servers').doc(serverId);
@@ -113,6 +113,9 @@ function startScheduler(client) {
 
                 // Log leaderboard points to sheet and history (after leaderboard update)
                 await writeLeaderboardToHistory(serverId, dateStr, leaderboardDoc.data().rankings);
+                
+                // Log historic leaderboards to sheet
+                await logHistoricLeaderboardsToSheet(serverId);
 
                 console.log(`\n✅ Completed processing for server ${serverId}`);
                 
